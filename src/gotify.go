@@ -30,7 +30,7 @@ func sendGotify(message string, title string, errCh chan ReporterError) {
 		return
 	}
 
-	err = sendhttpMessage("Gotify", glb_arguments.GotifyURL+"/message?token="+glb_arguments.GotifyToken, messageJSON)
+	err = sendhttpMessage("Gotify", glb_arguments.Reporter.Gotify.URL+"/message?token="+glb_arguments.Reporter.Gotify.Token, messageJSON)
 	if err != nil {
 		e.Error = err
 		errCh <- e

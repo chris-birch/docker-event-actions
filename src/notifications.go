@@ -29,8 +29,8 @@ func sendNotifications(timestamp time.Time, message string, title string, report
 	errCh := make(chan ReporterError, len(reporters))
 
 	// If there is a server tag, add it to the title
-	if len(glb_arguments.ServerTag) > 0 {
-		title = "[" + glb_arguments.ServerTag + "] " + title
+	if len(glb_arguments.Options.ServerTag) > 0 {
+		title = "[" + glb_arguments.Options.ServerTag + "] " + title
 	}
 
 	if slices.Contains(reporters, "Pushover") {

@@ -26,13 +26,13 @@ func sendMail(timestamp time.Time, message string, title string, errCh chan Repo
 		Reporter: "Mail",
 	}
 
-	from := glb_arguments.MailFrom
-	to := []string{glb_arguments.MailTo}
-	username := glb_arguments.MailUser
-	password := glb_arguments.MailPassword
+	from := glb_arguments.Reporter.Mail.From
+	to := []string{glb_arguments.Reporter.Mail.To}
+	username := glb_arguments.Reporter.Mail.User
+	password := glb_arguments.Reporter.Mail.Password
 
-	host := glb_arguments.MailHost
-	port := strconv.Itoa(glb_arguments.MailPort)
+	host := glb_arguments.Reporter.Mail.Host
+	port := strconv.Itoa(glb_arguments.Reporter.Mail.Port)
 	address := host + ":" + port
 
 	subject := title

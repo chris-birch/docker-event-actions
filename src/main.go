@@ -3,51 +3,23 @@ package main
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/alexflint/go-arg"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"gopkg.in/yaml.v3"
 
 	"github.com/rs/zerolog"
 )
 
-type args struct {
-	Pushover          bool                `arg:"env:PUSHOVER" default:"false" help:"Enable/Disable Pushover Notification (True/False)"`
-	PushoverAPIToken  string              `arg:"env:PUSHOVER_APITOKEN" help:"Pushover's API Token/Key"`
-	PushoverUserKey   string              `arg:"env:PUSHOVER_USER" help:"Pushover's User Key"`
-	Gotify            bool                `arg:"env:GOTIFY" default:"false" help:"Enable/Disable Gotify Notification (True/False)"`
-	GotifyURL         string              `arg:"env:GOTIFY_URL" help:"URL of your Gotify server"`
-	GotifyToken       string              `arg:"env:GOTIFY_TOKEN" help:"Gotify's App Token"`
-	Mail              bool                `arg:"env:MAIL" default:"false" help:"Enable/Disable Mail (SMTP) Notification (True/False)"`
-	MailFrom          string              `arg:"env:MAIL_FROM" help:"your.username@provider.com"`
-	MailTo            string              `arg:"env:MAIL_TO" help:"recipient@provider.com"`
-	MailUser          string              `arg:"env:MAIL_USER" help:"SMTP Username"`
-	MailPassword      string              `arg:"env:MAIL_PASSWORD" help:"SMTP Password"`
-	MailPort          int                 `arg:"env:MAIL_PORT" default:"587" help:"SMTP Port"`
-	MailHost          string              `arg:"env:MAIL_HOST" help:"SMTP Host"`
-	Mattermost        bool                `arg:"env:MATTERMOST" default:"false" help:"Enable/Disable Mattermost Notification (True/False)"`
-	MattermostURL     string              `arg:"env:MATTERMOST_URL" help:"URL of your Mattermost incoming webhook"`
-	MattermostChannel string              `arg:"env:MATTERMOST_CHANNEL" help:"Mattermost channel to post in"`
-	MattermostUser    string              `arg:"env:MATTERMOST_USER" default:"Docker Event Monitor" help:"Mattermost user to post as"`
-	Reporters         []string            `arg:"-"`
-	Delay             time.Duration       `arg:"env:DELAY" default:"500ms" help:"Delay before next message is send"`
-	FilterStrings     []string            `arg:"env:FILTER,--filter,separate" help:"Filter docker events using Docker syntax."`
-	Filter            map[string][]string `arg:"-"`
-	ExcludeStrings    []string            `arg:"env:EXCLUDE,--exclude,separate" help:"Exclude docker events using Docker syntax."`
-	Exclude           map[string][]string `arg:"-"`
-	LogLevel          string              `arg:"env:LOG_LEVEL" default:"info" help:"Set log level. Use debug for more logging."`
-	ServerTag         string              `arg:"env:SERVER_TAG" help:"Prefix to include in the title of notifications. Useful when running docker-event-monitors on multiple machines."`
-	Version           bool                `arg:"-v" help:"Print version information."`
-}
-
-// Creating a global logger
+// Create global logger
 var logger zerolog.Logger
 
 // hold the supplied run-time arguments globally
-var glb_arguments args
+var glb_arguments config
 
 // version information, are injected during build process
 var (
@@ -59,45 +31,46 @@ var (
 )
 
 func init() {
+	loadConfig()
 	parseArgs()
-	configureLogger(glb_arguments.LogLevel)
+	configureLogger(glb_arguments.Options.LogLevel)
 
-	if glb_arguments.Pushover {
-		if len(glb_arguments.PushoverAPIToken) == 0 {
-			logger.Fatal().Msg("Pushover enabled. Pushover API token required!")
+	if glb_arguments.Reporter.Pushover.Enabled {
+		if len(glb_arguments.Reporter.Pushover.APIToken) == 0 {
+			logger.Fatal().Msg("Pushover Enabled. Pushover API token required!")
 		}
-		if len(glb_arguments.PushoverUserKey) == 0 {
-			logger.Fatal().Msg("Pushover enabled. Pushover user key required!")
-		}
-	}
-	if glb_arguments.Gotify {
-		if len(glb_arguments.GotifyURL) == 0 {
-			logger.Fatal().Msg("Gotify enabled. Gotify URL required!")
-		}
-		if len(glb_arguments.GotifyToken) == 0 {
-			logger.Fatal().Msg("Gotify enabled. Gotify APP token required!")
+		if len(glb_arguments.Reporter.Pushover.UserKey) == 0 {
+			logger.Fatal().Msg("Pushover Enabled. Pushover user key required!")
 		}
 	}
-	if glb_arguments.Mail {
-		if len(glb_arguments.MailUser) == 0 {
-			logger.Fatal().Msg("E-Mail notification enabled. SMTP username required!")
+	if glb_arguments.Reporter.Gotify.Enabled {
+		if len(glb_arguments.Reporter.Gotify.URL) == 0 {
+			logger.Fatal().Msg("Gotify Enabled. Gotify URL required!")
 		}
-		if len(glb_arguments.MailTo) == 0 {
-			logger.Fatal().Msg("E-Mail notification enabled. Recipient address required!")
-		}
-		if len(glb_arguments.MailFrom) == 0 {
-			glb_arguments.MailFrom = glb_arguments.MailUser
-		}
-		if len(glb_arguments.MailPassword) == 0 {
-			logger.Fatal().Msg("E-Mail notification enabled. SMTP Password required!")
-		}
-		if len(glb_arguments.MailHost) == 0 {
-			logger.Fatal().Msg("E-Mail notification enabled. SMTP host address required!")
+		if len(glb_arguments.Reporter.Gotify.Token) == 0 {
+			logger.Fatal().Msg("Gotify Enabled. Gotify APP token required!")
 		}
 	}
-	if glb_arguments.Mattermost {
-		if len(glb_arguments.MattermostURL) == 0 {
-			logger.Fatal().Msg("Mattermost enabled. Mattermost URL required!")
+	if glb_arguments.Reporter.Mail.Enabled {
+		if len(glb_arguments.Reporter.Mail.User) == 0 {
+			logger.Fatal().Msg("E-Mail notification Enabled. SMTP username required!")
+		}
+		if len(glb_arguments.Reporter.Mail.To) == 0 {
+			logger.Fatal().Msg("E-Mail notification Enabled. Recipient address required!")
+		}
+		if len(glb_arguments.Reporter.Mail.From) == 0 {
+			glb_arguments.Reporter.Mail.From = glb_arguments.Reporter.Mail.User
+		}
+		if len(glb_arguments.Reporter.Mail.Password) == 0 {
+			logger.Fatal().Msg("E-Mail notification Enabled. SMTP Password required!")
+		}
+		if len(glb_arguments.Reporter.Mail.Host) == 0 {
+			logger.Fatal().Msg("E-Mail notification Enabled. SMTP host address required!")
+		}
+	}
+	if glb_arguments.Reporter.Mattermost.Enabled {
+		if len(glb_arguments.Reporter.Mattermost.URL) == 0 {
+			logger.Fatal().Msg("Mattermost Enabled. Mattermost URL required!")
 		}
 	}
 }
@@ -152,16 +125,33 @@ func main() {
 	}
 }
 
+func loadConfig() {
+	configFile, err := filepath.Abs("./config.yml")
+
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to set config file path")
+	}
+
+	buf, err := os.ReadFile(configFile)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to read config file")
+	}
+
+	err = yaml.Unmarshal(buf, &glb_arguments)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to parse config file")
+	}
+}
+
 func parseArgs() {
-	parser := arg.MustParse(&glb_arguments)
 
 	// Parse (include) filters
 	glb_arguments.Filter = make(map[string][]string)
 
-	for _, filter := range glb_arguments.FilterStrings {
+	for _, filter := range glb_arguments.Options.FilterStrings {
 		pos := strings.Index(filter, "=")
 		if pos == -1 {
-			parser.Fail("each filter should be of the form key=value")
+			logger.Fatal().Msg("each filter should be of the form key=value")
 		}
 		key := filter[:pos]
 		val := filter[pos+1:]
@@ -171,10 +161,10 @@ func parseArgs() {
 	// Parse exclude filters
 	glb_arguments.Exclude = make(map[string][]string)
 
-	for _, exclude := range glb_arguments.ExcludeStrings {
+	for _, exclude := range glb_arguments.Options.ExcludeStrings {
 		pos := strings.Index(exclude, "=")
 		if pos == -1 {
-			parser.Fail("each filter should be of the form key=value")
+			logger.Fatal().Msg("each filter should be of the form key=value")
 		}
 		//trim whitespaces
 		key := strings.TrimSpace(exclude[:pos])
@@ -182,18 +172,18 @@ func parseArgs() {
 		glb_arguments.Exclude[key] = append(glb_arguments.Exclude[key], val)
 	}
 
-	//Parse enabled reportes
+	//Parse Enabled reportes
 
-	if glb_arguments.Gotify {
+	if glb_arguments.Reporter.Gotify.Enabled {
 		glb_arguments.Reporters = append(glb_arguments.Reporters, "Gotify")
 	}
-	if glb_arguments.Mattermost {
+	if glb_arguments.Reporter.Mattermost.Enabled {
 		glb_arguments.Reporters = append(glb_arguments.Reporters, "Mattermost")
 	}
-	if glb_arguments.Pushover {
+	if glb_arguments.Reporter.Pushover.Enabled {
 		glb_arguments.Reporters = append(glb_arguments.Reporters, "Pushover")
 	}
-	if glb_arguments.Mail {
+	if glb_arguments.Reporter.Mail.Enabled {
 		glb_arguments.Reporters = append(glb_arguments.Reporters, "Mail")
 	}
 

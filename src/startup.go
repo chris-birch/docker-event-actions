@@ -14,57 +14,57 @@ func buildStartupMessage(timestamp time.Time) string {
 	startup_message_builder.WriteString("Docker event monitor started at " + timestamp.Format(time.RFC1123Z) + "\n")
 	startup_message_builder.WriteString("Docker event monitor version: " + version + "\n")
 
-	if glb_arguments.Pushover {
-		startup_message_builder.WriteString("Pushover notification enabled")
+	if glb_arguments.Reporter.Pushover.Enabled {
+		startup_message_builder.WriteString("Pushover notification Enabled")
 	} else {
 		startup_message_builder.WriteString("Pushover notification disabled")
 	}
 
-	if glb_arguments.Gotify {
-		startup_message_builder.WriteString("\nGotify notification enabled")
+	if glb_arguments.Reporter.Gotify.Enabled {
+		startup_message_builder.WriteString("\nGotify notification Enabled")
 	} else {
 		startup_message_builder.WriteString("\nGotify notification disabled")
 	}
-	if glb_arguments.Mail {
-		startup_message_builder.WriteString("\nE-Mail notification enabled")
+	if glb_arguments.Reporter.Mail.Enabled {
+		startup_message_builder.WriteString("\nE-Mail notification Enabled")
 	} else {
 		startup_message_builder.WriteString("\nE-Mail notification disabled")
 	}
 
-	if glb_arguments.Mattermost {
-		startup_message_builder.WriteString("\nMattermost notification enabled")
-		if glb_arguments.MattermostChannel != "" {
-			startup_message_builder.WriteString("\nMattermost channel: " + glb_arguments.MattermostChannel)
+	if glb_arguments.Reporter.Mattermost.Enabled {
+		startup_message_builder.WriteString("\nMattermost notification Enabled")
+		if glb_arguments.Reporter.Mattermost.Channel != "" {
+			startup_message_builder.WriteString("\nMattermost channel: " + glb_arguments.Reporter.Mattermost.Channel)
 		}
-		if glb_arguments.MattermostUser != "" {
-			startup_message_builder.WriteString("\nMattermost username: " + glb_arguments.MattermostUser)
+		if glb_arguments.Reporter.Mattermost.User != "" {
+			startup_message_builder.WriteString("\nMattermost username: " + glb_arguments.Reporter.Mattermost.User)
 		}
 	} else {
 		startup_message_builder.WriteString("\nMattermost notification disabled")
 	}
 
-	if glb_arguments.Delay > 0 {
-		startup_message_builder.WriteString("\nUsing delay of " + glb_arguments.Delay.String())
+	if glb_arguments.Options.Delay > 0 {
+		startup_message_builder.WriteString("\nUsing delay of " + glb_arguments.Options.Delay.String())
 	} else {
 		startup_message_builder.WriteString("\nDelay disabled")
 	}
 
-	startup_message_builder.WriteString("\nLog level: " + glb_arguments.LogLevel)
+	startup_message_builder.WriteString("\nLog level: " + glb_arguments.Options.LogLevel)
 
-	if glb_arguments.ServerTag != "" {
-		startup_message_builder.WriteString("\nServerTag: " + glb_arguments.ServerTag)
+	if glb_arguments.Options.ServerTag != "" {
+		startup_message_builder.WriteString("\nServerTag: " + glb_arguments.Options.ServerTag)
 	} else {
 		startup_message_builder.WriteString("\nServerTag: none")
 	}
 
-	if len(glb_arguments.FilterStrings) > 0 {
-		startup_message_builder.WriteString("\nFilterStrings: " + strings.Join(glb_arguments.FilterStrings, " "))
+	if len(glb_arguments.Options.FilterStrings) > 0 {
+		startup_message_builder.WriteString("\nFilterStrings: " + strings.Join(glb_arguments.Options.FilterStrings, " "))
 	} else {
 		startup_message_builder.WriteString("\nFilterStrings: none")
 	}
 
-	if len(glb_arguments.ExcludeStrings) > 0 {
-		startup_message_builder.WriteString("\nExcludeStrings: " + strings.Join(glb_arguments.ExcludeStrings, " "))
+	if len(glb_arguments.Options.ExcludeStrings) > 0 {
+		startup_message_builder.WriteString("\nExcludeStrings: " + strings.Join(glb_arguments.Options.ExcludeStrings, " "))
 	} else {
 		startup_message_builder.WriteString("\nExcludeStrings: none")
 	}
@@ -77,35 +77,35 @@ func logArguments() {
 		Dict("options", zerolog.Dict().
 			Dict("reporter", zerolog.Dict().
 				Dict("Pushover", zerolog.Dict().
-					Bool("enabled", glb_arguments.Pushover).
-					Str("PushoverAPIToken", glb_arguments.PushoverAPIToken).
-					Str("PushoverUserKey", glb_arguments.PushoverUserKey),
+					Bool("Enabled", glb_arguments.Reporter.Pushover.Enabled).
+					Str("PushoverAPIToken", glb_arguments.Reporter.Pushover.APIToken).
+					Str("PushoverUserKey", glb_arguments.Reporter.Pushover.UserKey),
 				).
 				Dict("Gotify", zerolog.Dict().
-					Bool("enabled", glb_arguments.Gotify).
-					Str("GotifyURL", glb_arguments.GotifyURL).
-					Str("GotifyToken", glb_arguments.GotifyToken),
+					Bool("Enabled", glb_arguments.Reporter.Gotify.Enabled).
+					Str("GotifyURL", glb_arguments.Reporter.Gotify.URL).
+					Str("GotifyToken", glb_arguments.Reporter.Gotify.Token),
 				).
 				Dict("Mail", zerolog.Dict().
-					Bool("enabled", glb_arguments.Mail).
-					Str("MailFrom", glb_arguments.MailFrom).
-					Str("MailTo", glb_arguments.MailTo).
-					Str("MailHost", glb_arguments.MailHost).
-					Str("MailUser", glb_arguments.MailUser).
-					Int("Port", glb_arguments.MailPort),
+					Bool("Enabled", glb_arguments.Reporter.Mail.Enabled).
+					Str("MailFrom", glb_arguments.Reporter.Mail.From).
+					Str("MailTo", glb_arguments.Reporter.Mail.To).
+					Str("MailHost", glb_arguments.Reporter.Mail.Host).
+					Str("MailUser", glb_arguments.Reporter.Mail.User).
+					Int("Port", glb_arguments.Reporter.Mail.Port),
 				).
 				Dict("Mattermost", zerolog.Dict().
-					Bool("enabled", glb_arguments.Mattermost).
-					Str("MattermostURL", glb_arguments.MattermostURL).
-					Str("MattermostChannel", glb_arguments.MattermostChannel).
-					Str("MattermostUser", glb_arguments.MattermostUser),
+					Bool("Enabled", glb_arguments.Reporter.Mattermost.Enabled).
+					Str("MattermostURL", glb_arguments.Reporter.Mattermost.URL).
+					Str("MattermostChannel", glb_arguments.Reporter.Mattermost.Channel).
+					Str("MattermostUser", glb_arguments.Reporter.Mattermost.User),
 				),
 			).
-			Str("Delay", glb_arguments.Delay.String()).
-			Str("Loglevel", glb_arguments.LogLevel).
-			Str("ServerTag", glb_arguments.ServerTag).
-			Str("Filter", strings.Join(glb_arguments.FilterStrings, " ")).
-			Str("Exclude", strings.Join(glb_arguments.ExcludeStrings, " ")),
+			Str("Delay", glb_arguments.Options.Delay.String()).
+			Str("Loglevel", glb_arguments.Options.LogLevel).
+			Str("ServerTag", glb_arguments.Options.ServerTag).
+			Str("Filter", strings.Join(glb_arguments.Options.FilterStrings, " ")).
+			Str("Exclude", strings.Join(glb_arguments.Options.ExcludeStrings, " ")),
 		).
 		Dict("version", zerolog.Dict().
 			Str("Version", version).

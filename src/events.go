@@ -21,7 +21,7 @@ func processEvent(event events.Message) {
 	// Sometimes events are pushed through the event channel really quickly, but they arrive on the notification clients in
 	// wrong order (probably due to message delivery time), e.g. Pushover is susceptible for this.
 	// Finishing this function not before a certain time before draining the next event from the event channel in main() solves the issue
-	timer := time.NewTimer(glb_arguments.Delay)
+	timer := time.NewTimer(glb_arguments.Options.Delay)
 
 	ActorID = getActorID(event)
 	ActorImage = getActorImage(event)
