@@ -46,8 +46,7 @@ type options struct {
 type config struct {
 	Reporter  reporter
 	Options   options
-	Reporters []string `yaml:"-"`
+	Reporters []string            `yaml:"-"`
 	Filter    map[string][]string `yaml:"-"`
 	Exclude   map[string][]string `yaml:"-"`
-	Version   bool
 }

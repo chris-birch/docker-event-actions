@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,16 +22,13 @@ var logger zerolog.Logger
 // hold the supplied run-time arguments globally
 var glb_arguments config
 
-// version information, are injected during build process
-var (
-	version string = "n/a"
-	commit  string = "n/a"
-	date    string = "0"
-	gitdate string = "0"
-	branch  string = "n/a"
-)
+// should we only print version information and exit
+var showVersion bool
 
 func init() {
+	flag.BoolVar(&showVersion, "v", false, "print version information")
+	flag.Parse()
+
 	loadConfig()
 	parseArgs()
 	configureLogger(glb_arguments.Options.LogLevel)
@@ -77,7 +75,7 @@ func init() {
 
 func main() {
 	// if the -v flag was set, print version information and exit
-	if glb_arguments.Version {
+	if showVersion {
 		printVersion()
 	}
 
