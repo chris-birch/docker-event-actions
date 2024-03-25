@@ -20,8 +20,8 @@ type MattermostMessage struct {
 func sendMattermost(message string, title string, errCh chan ReporterError) {
 
 	m := MattermostMessage{
-		Username: glb_arguments.Reporter.Mattermost.User,
-		Channel:  glb_arguments.Reporter.Mattermost.Channel,
+		Username: config.Reporter.Mattermost.User,
+		Channel:  config.Reporter.Mattermost.Channel,
 		Text:     "##### " + title + "\n" + message,
 	}
 
@@ -37,7 +37,7 @@ func sendMattermost(message string, title string, errCh chan ReporterError) {
 		return
 	}
 
-	err = sendhttpMessage("Mattermost", glb_arguments.Reporter.Mattermost.URL, messageJSON)
+	err = sendhttpMessage("Mattermost", config.Reporter.Mattermost.URL, messageJSON)
 	if err != nil {
 		e.Error = err
 		errCh <- e

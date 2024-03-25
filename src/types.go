@@ -43,7 +43,7 @@ type options struct {
 	Delay          time.Duration `yaml:"delay"`
 }
 
-type config struct {
+type Config struct {
 	Reporter  reporter
 	Options   options
 	Reporters []string            `yaml:"-"`

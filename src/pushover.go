@@ -21,8 +21,8 @@ func sendPushover(timestamp time.Time, message string, title string, errCh chan 
 	// Send a message to Pushover
 
 	m := PushoverMessage{
-		Token:     glb_arguments.Reporter.Pushover.APIToken,
-		User:      glb_arguments.Reporter.Pushover.UserKey,
+		Token:     config.Reporter.Pushover.APIToken,
+		User:      config.Reporter.Pushover.UserKey,
 		Title:     title,
 		Message:   message,
 		Timestamp: strconv.FormatInt(timestamp.Unix(), 10),

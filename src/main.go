@@ -17,8 +17,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// hold the supplied run-time arguments globally
-var glb_arguments config
+// hold config options and settings globally
+var config Config
 
 // should we only print version information and exit
 var showVersion bool
@@ -35,47 +35,47 @@ func init() {
 	loadConfig()
 
 	// after loading the config, we we migth increase log level
-	if glb_arguments.Options.LogLevel == "debug" {
+	if config.Options.LogLevel == "debug" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
 	parseArgs()
 
-	if glb_arguments.Reporter.Pushover.Enabled {
-		if len(glb_arguments.Reporter.Pushover.APIToken) == 0 {
+	if config.Reporter.Pushover.Enabled {
+		if len(config.Reporter.Pushover.APIToken) == 0 {
 			log.Fatal().Msg("Pushover Enabled. Pushover API token required!")
 		}
-		if len(glb_arguments.Reporter.Pushover.UserKey) == 0 {
+		if len(config.Reporter.Pushover.UserKey) == 0 {
 			log.Fatal().Msg("Pushover Enabled. Pushover user key required!")
 		}
 	}
-	if glb_arguments.Reporter.Gotify.Enabled {
-		if len(glb_arguments.Reporter.Gotify.URL) == 0 {
+	if config.Reporter.Gotify.Enabled {
+		if len(config.Reporter.Gotify.URL) == 0 {
 			log.Fatal().Msg("Gotify Enabled. Gotify URL required!")
 		}
-		if len(glb_arguments.Reporter.Gotify.Token) == 0 {
+		if len(config.Reporter.Gotify.Token) == 0 {
 			log.Fatal().Msg("Gotify Enabled. Gotify APP token required!")
 		}
 	}
-	if glb_arguments.Reporter.Mail.Enabled {
-		if len(glb_arguments.Reporter.Mail.User) == 0 {
+	if config.Reporter.Mail.Enabled {
+		if len(config.Reporter.Mail.User) == 0 {
 			log.Fatal().Msg("E-Mail notification Enabled. SMTP username required!")
 		}
-		if len(glb_arguments.Reporter.Mail.To) == 0 {
+		if len(config.Reporter.Mail.To) == 0 {
 			log.Fatal().Msg("E-Mail notification Enabled. Recipient address required!")
 		}
-		if len(glb_arguments.Reporter.Mail.From) == 0 {
-			glb_arguments.Reporter.Mail.From = glb_arguments.Reporter.Mail.User
+		if len(config.Reporter.Mail.From) == 0 {
+			config.Reporter.Mail.From = config.Reporter.Mail.User
 		}
-		if len(glb_arguments.Reporter.Mail.Password) == 0 {
+		if len(config.Reporter.Mail.Password) == 0 {
 			log.Fatal().Msg("E-Mail notification Enabled. SMTP Password required!")
 		}
-		if len(glb_arguments.Reporter.Mail.Host) == 0 {
+		if len(config.Reporter.Mail.Host) == 0 {
 			log.Fatal().Msg("E-Mail notification Enabled. SMTP host address required!")
 		}
 	}
-	if glb_arguments.Reporter.Mattermost.Enabled {
-		if len(glb_arguments.Reporter.Mattermost.URL) == 0 {
+	if config.Reporter.Mattermost.Enabled {
+		if len(config.Reporter.Mattermost.URL) == 0 {
 			log.Fatal().Msg("Mattermost Enabled. Mattermost URL required!")
 		}
 	}
@@ -92,10 +92,10 @@ func main() {
 
 	timestamp := time.Now()
 	startup_message := buildStartupMessage(timestamp)
-	sendNotifications(timestamp, startup_message, "Starting docker event monitor", glb_arguments.Reporters)
+	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.Reporters)
 
 	filterArgs := filters.NewArgs()
-	for key, values := range glb_arguments.Filter {
+	for key, values := range config.Filter {
 		for _, value := range values {
 			filterArgs.Add(key, value)
 		}
@@ -120,7 +120,7 @@ func main() {
 				Interface("event", event).Msg("")
 
 			// Check if event should be exlcuded from reporting
-			if len(glb_arguments.Exclude) > 0 {
+			if len(config.Exclude) > 0 {
 				log.Debug().Msg("Performing check for event exclusion")
 				if excludeEvent(event) {
 					break //breaks out of the select and waits for the next event to arrive
@@ -143,7 +143,7 @@ func loadConfig() {
 		log.Fatal().Err(err).Msg("Failed to read config file")
 	}
 
-	err = yaml.Unmarshal(buf, &glb_arguments)
+	err = yaml.Unmarshal(buf, &config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to parse config file")
 	}
@@ -152,22 +152,22 @@ func loadConfig() {
 func parseArgs() {
 
 	// Parse (include) filters
-	glb_arguments.Filter = make(map[string][]string)
+	config.Filter = make(map[string][]string)
 
-	for _, filter := range glb_arguments.Options.FilterStrings {
+	for _, filter := range config.Options.FilterStrings {
 		pos := strings.Index(filter, "=")
 		if pos == -1 {
 			log.Fatal().Msg("each filter should be of the form key=value")
 		}
 		key := filter[:pos]
 		val := filter[pos+1:]
-		glb_arguments.Filter[key] = append(glb_arguments.Filter[key], val)
+		config.Filter[key] = append(config.Filter[key], val)
 	}
 
 	// Parse exclude filters
-	glb_arguments.Exclude = make(map[string][]string)
+	config.Exclude = make(map[string][]string)
 
-	for _, exclude := range glb_arguments.Options.ExcludeStrings {
+	for _, exclude := range config.Options.ExcludeStrings {
 		pos := strings.Index(exclude, "=")
 		if pos == -1 {
 			log.Fatal().Msg("each filter should be of the form key=value")
@@ -175,22 +175,22 @@ func parseArgs() {
 		//trim whitespaces
 		key := strings.TrimSpace(exclude[:pos])
 		val := exclude[pos+1:]
-		glb_arguments.Exclude[key] = append(glb_arguments.Exclude[key], val)
+		config.Exclude[key] = append(config.Exclude[key], val)
 	}
 
 	//Parse Enabled reportes
 
-	if glb_arguments.Reporter.Gotify.Enabled {
-		glb_arguments.Reporters = append(glb_arguments.Reporters, "Gotify")
+	if config.Reporter.Gotify.Enabled {
+		config.Reporters = append(config.Reporters, "Gotify")
 	}
-	if glb_arguments.Reporter.Mattermost.Enabled {
-		glb_arguments.Reporters = append(glb_arguments.Reporters, "Mattermost")
+	if config.Reporter.Mattermost.Enabled {
+		config.Reporters = append(config.Reporters, "Mattermost")
 	}
-	if glb_arguments.Reporter.Pushover.Enabled {
-		glb_arguments.Reporters = append(glb_arguments.Reporters, "Pushover")
+	if config.Reporter.Pushover.Enabled {
+		config.Reporters = append(config.Reporters, "Pushover")
 	}
-	if glb_arguments.Reporter.Mail.Enabled {
-		glb_arguments.Reporters = append(glb_arguments.Reporters, "Mail")
+	if config.Reporter.Mail.Enabled {
+		config.Reporters = append(config.Reporters, "Mail")
 	}
 
 }
