@@ -25,8 +25,12 @@ var glb_arguments config
 // should we only print version information and exit
 var showVersion bool
 
+// config file path
+var configFilePath string
+
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "print version information")
+	flag.StringVar(&configFilePath, "config", "config.yml", "config file path")
 	flag.Parse()
 
 	loadConfig()
@@ -124,7 +128,7 @@ func main() {
 }
 
 func loadConfig() {
-	configFile, err := filepath.Abs("./config.yml")
+	configFile, err := filepath.Abs(configFilePath)
 
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to set config file path")
