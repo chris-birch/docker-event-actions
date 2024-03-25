@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type ReporterError struct {
@@ -79,7 +81,7 @@ func sendNotifications(timestamp time.Time, message string, title string, report
 
 		// Error if all failed
 		if len(ReporterErrors) == len(reporters) {
-			logger.Error().Msg("All reporters failed!")
+			log.Error().Msg("All reporters failed!")
 			return
 		}
 
@@ -114,7 +116,7 @@ func sendhttpMessage(reporter string, address string, messageJSON []byte) error 
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(messageJSON))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", reporter).Msg("Failed to build request")
+		log.Error().Err(err).Str("reporter", reporter).Msg("Failed to build request")
 		return errors.New("failed to build request")
 	}
 
@@ -126,7 +128,7 @@ func sendhttpMessage(reporter string, address string, messageJSON []byte) error 
 	// Send request
 	resp, err := netClient.Do(req)
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", reporter).Msg("Failed to send request")
+		log.Error().Err(err).Str("reporter", reporter).Msg("Failed to send request")
 		return errors.New("failed to send request")
 	}
 	defer resp.Body.Close()
@@ -135,20 +137,20 @@ func sendhttpMessage(reporter string, address string, messageJSON []byte) error 
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", reporter).Msg("")
+		log.Error().Err(err).Str("reporter", reporter).Msg("")
 		return errors.New("reading response body failed")
 	}
 
 	// Log non successfull status codes
 	if statusCode != 200 {
-		logger.Error().
+		log.Error().
 			Str("reporter", reporter).
 			Int("status code", statusCode).
 			Str("response body", string(respBody)).
 			Msg("Pushing message failed")
 		return errors.New("pushing message failed\nhttp status code: " + strconv.Itoa(statusCode))
 	}
-	logger.Debug().
+	log.Debug().
 		Str("reporter", reporter).
 		Int("statusCode", statusCode).
 		Str("responseBody", string(respBody)).

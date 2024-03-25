@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func buildStartupMessage(timestamp time.Time) string {
@@ -73,7 +74,7 @@ func buildStartupMessage(timestamp time.Time) string {
 }
 
 func logArguments() {
-	logger.Info().
+	log.Info().
 		Dict("options", zerolog.Dict().
 			Dict("reporter", zerolog.Dict().
 				Dict("Pushover", zerolog.Dict().
@@ -120,7 +121,7 @@ func logArguments() {
 func stringToUnix(str string) time.Time {
 	i, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("String to timestamp conversion failed")
+		log.Fatal().Err(err).Msg("String to timestamp conversion failed")
 	}
 	tm := time.Unix(i, 0)
 	return tm

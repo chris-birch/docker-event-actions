@@ -14,10 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
-
-// Create global logger
-var logger zerolog.Logger
 
 // hold the supplied run-time arguments globally
 var glb_arguments config
@@ -33,46 +31,52 @@ func init() {
 	flag.StringVar(&configFilePath, "config", "config.yml", "config file path")
 	flag.Parse()
 
+	configureLogger()
 	loadConfig()
+
+	// after loading the config, we we migth increase log level
+	if glb_arguments.Options.LogLevel == "debug" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
 	parseArgs()
-	configureLogger(glb_arguments.Options.LogLevel)
 
 	if glb_arguments.Reporter.Pushover.Enabled {
 		if len(glb_arguments.Reporter.Pushover.APIToken) == 0 {
-			logger.Fatal().Msg("Pushover Enabled. Pushover API token required!")
+			log.Fatal().Msg("Pushover Enabled. Pushover API token required!")
 		}
 		if len(glb_arguments.Reporter.Pushover.UserKey) == 0 {
-			logger.Fatal().Msg("Pushover Enabled. Pushover user key required!")
+			log.Fatal().Msg("Pushover Enabled. Pushover user key required!")
 		}
 	}
 	if glb_arguments.Reporter.Gotify.Enabled {
 		if len(glb_arguments.Reporter.Gotify.URL) == 0 {
-			logger.Fatal().Msg("Gotify Enabled. Gotify URL required!")
+			log.Fatal().Msg("Gotify Enabled. Gotify URL required!")
 		}
 		if len(glb_arguments.Reporter.Gotify.Token) == 0 {
-			logger.Fatal().Msg("Gotify Enabled. Gotify APP token required!")
+			log.Fatal().Msg("Gotify Enabled. Gotify APP token required!")
 		}
 	}
 	if glb_arguments.Reporter.Mail.Enabled {
 		if len(glb_arguments.Reporter.Mail.User) == 0 {
-			logger.Fatal().Msg("E-Mail notification Enabled. SMTP username required!")
+			log.Fatal().Msg("E-Mail notification Enabled. SMTP username required!")
 		}
 		if len(glb_arguments.Reporter.Mail.To) == 0 {
-			logger.Fatal().Msg("E-Mail notification Enabled. Recipient address required!")
+			log.Fatal().Msg("E-Mail notification Enabled. Recipient address required!")
 		}
 		if len(glb_arguments.Reporter.Mail.From) == 0 {
 			glb_arguments.Reporter.Mail.From = glb_arguments.Reporter.Mail.User
 		}
 		if len(glb_arguments.Reporter.Mail.Password) == 0 {
-			logger.Fatal().Msg("E-Mail notification Enabled. SMTP Password required!")
+			log.Fatal().Msg("E-Mail notification Enabled. SMTP Password required!")
 		}
 		if len(glb_arguments.Reporter.Mail.Host) == 0 {
-			logger.Fatal().Msg("E-Mail notification Enabled. SMTP host address required!")
+			log.Fatal().Msg("E-Mail notification Enabled. SMTP host address required!")
 		}
 	}
 	if glb_arguments.Reporter.Mattermost.Enabled {
 		if len(glb_arguments.Reporter.Mattermost.URL) == 0 {
-			logger.Fatal().Msg("Mattermost Enabled. Mattermost URL required!")
+			log.Fatal().Msg("Mattermost Enabled. Mattermost URL required!")
 		}
 	}
 }
@@ -99,7 +103,7 @@ func main() {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to create new docker client")
+		log.Fatal().Err(err).Msg("Failed to create new docker client")
 	}
 	defer cli.Close()
 
@@ -109,15 +113,15 @@ func main() {
 	for {
 		select {
 		case err := <-errs:
-			logger.Fatal().Err(err).Msg("")
+			log.Fatal().Err(err).Msg("")
 		case event := <-event_chan:
 			// if logging level is debug, log the event
-			logger.Debug().
+			log.Debug().
 				Interface("event", event).Msg("")
 
 			// Check if event should be exlcuded from reporting
 			if len(glb_arguments.Exclude) > 0 {
-				logger.Debug().Msg("Performing check for event exclusion")
+				log.Debug().Msg("Performing check for event exclusion")
 				if excludeEvent(event) {
 					break //breaks out of the select and waits for the next event to arrive
 				}
@@ -131,17 +135,17 @@ func loadConfig() {
 	configFile, err := filepath.Abs(configFilePath)
 
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to set config file path")
+		log.Fatal().Err(err).Msg("Failed to set config file path")
 	}
 
 	buf, err := os.ReadFile(configFile)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to read config file")
+		log.Fatal().Err(err).Msg("Failed to read config file")
 	}
 
 	err = yaml.Unmarshal(buf, &glb_arguments)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to parse config file")
+		log.Fatal().Err(err).Msg("Failed to parse config file")
 	}
 }
 
@@ -153,7 +157,7 @@ func parseArgs() {
 	for _, filter := range glb_arguments.Options.FilterStrings {
 		pos := strings.Index(filter, "=")
 		if pos == -1 {
-			logger.Fatal().Msg("each filter should be of the form key=value")
+			log.Fatal().Msg("each filter should be of the form key=value")
 		}
 		key := filter[:pos]
 		val := filter[pos+1:]
@@ -166,7 +170,7 @@ func parseArgs() {
 	for _, exclude := range glb_arguments.Options.ExcludeStrings {
 		pos := strings.Index(exclude, "=")
 		if pos == -1 {
-			logger.Fatal().Msg("each filter should be of the form key=value")
+			log.Fatal().Msg("each filter should be of the form key=value")
 		}
 		//trim whitespaces
 		key := strings.TrimSpace(exclude[:pos])
@@ -191,24 +195,14 @@ func parseArgs() {
 
 }
 
-func configureLogger(LogLevel string) {
+func configureLogger() {
+
 	// Configure time/timestamp format
 	zerolog.TimeFieldFormat = time.RFC1123Z
 
-	// Change logging level when debug flag is set
-	if LogLevel == "debug" {
-		logger = zerolog.New(os.Stdout).
-			Level(zerolog.DebugLevel).
-			With().
-			Timestamp().
-			Str("service", "docker event monitor").
-			Logger()
-	} else {
-		logger = zerolog.New(os.Stdout).
-			Level(zerolog.InfoLevel).
-			With().
-			Str("service", "docker event monitor").
-			Timestamp().
-			Logger()
-	}
+	// Default level is info
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	// Add timestamp and service string
+	log.Logger = log.With().Timestamp().Str("service", "docker event monitor").Logger()
 }

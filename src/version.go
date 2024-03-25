@@ -1,6 +1,10 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"github.com/rs/zerolog/log"
+)
 
 // version information, are injected during build process
 var (
@@ -12,7 +16,7 @@ var (
 )
 
 func printVersion() {
-	logger.Info().
+	log.Info().
 		Str("Version", version).
 		Str("Branch", branch).
 		Str("Commit", commit).

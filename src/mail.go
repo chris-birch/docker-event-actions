@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func buildEMail(timestamp time.Time, from string, to []string, subject string, body string) string {
@@ -44,7 +46,7 @@ func sendMail(timestamp time.Time, message string, title string, errCh chan Repo
 
 	err := smtp.SendMail(address, auth, from, to, []byte(mail))
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", "Mail").Msg("")
+		log.Error().Err(err).Str("reporter", "Mail").Msg("")
 		e.Error = errors.New("failed to send mail")
 		errCh <- e
 		return
