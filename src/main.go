@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,9 +27,22 @@ var showVersion bool
 // config file path
 var configFilePath string
 
+var Usage = func() {
+	fmt.Printf("Usage of %s", os.Args[0])
+	fmt.Print(
+		`
+-v, --version		prints version information
+-c, --config [path]	config file path (default "config.yml")
+-h, --help		prints help information
+`)
+}
+
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "print version information")
+	flag.BoolVar(&showVersion, "version", false, "print version information")
+	flag.StringVar(&configFilePath, "c", "config.yml", "config file path")
 	flag.StringVar(&configFilePath, "config", "config.yml", "config file path")
+	flag.Usage = Usage
 	flag.Parse()
 
 	configureLogger()
