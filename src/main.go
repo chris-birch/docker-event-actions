@@ -27,7 +27,7 @@ var showVersion bool
 // config file path
 var configFilePath string
 
-var Usage = func() {
+var PrintUsage = func() {
 	fmt.Printf("Usage of %s", os.Args[0])
 	fmt.Print(
 		`
@@ -42,7 +42,7 @@ func init() {
 	flag.BoolVar(&showVersion, "version", false, "print version information")
 	flag.StringVar(&configFilePath, "c", "config.yml", "config file path")
 	flag.StringVar(&configFilePath, "config", "config.yml", "config file path")
-	flag.Usage = Usage
+	flag.Usage = PrintUsage
 	flag.Parse()
 
 	configureLogger()
