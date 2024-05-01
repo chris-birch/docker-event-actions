@@ -44,12 +44,6 @@ func buildStartupMessage(timestamp time.Time) string {
 		startup_message_builder.WriteString("\nMattermost notification disabled")
 	}
 
-	if config.Options.Delay > 0 {
-		startup_message_builder.WriteString("\nUsing delay of " + config.Options.Delay.String())
-	} else {
-		startup_message_builder.WriteString("\nDelay disabled")
-	}
-
 	startup_message_builder.WriteString("\nLog level: " + config.Options.LogLevel)
 
 	if config.Options.ServerTag != "" {
@@ -102,7 +96,6 @@ func logArguments() {
 					Str("MattermostUser", config.Reporter.Mattermost.User),
 				),
 			).
-			Str("Delay", config.Options.Delay.String()).
 			Str("Loglevel", config.Options.LogLevel).
 			Str("ServerTag", config.Options.ServerTag).
 			Str("Filter", strings.Join(config.Options.FilterStrings, " ")).

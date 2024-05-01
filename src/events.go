@@ -18,12 +18,6 @@ func processEvent(event events.Message) {
 	var msg_builder, title_builder strings.Builder
 	var ActorID, ActorImage, ActorName, TitleID, ActorImageVersion string
 
-	// Adding a small configurable delay here
-	// Sometimes events are pushed through the event channel really quickly, but they arrive on the notification clients in
-	// wrong order (probably due to message delivery time), e.g. Pushover is susceptible for this.
-	// Finishing this function not before a certain time before draining the next event from the event channel in main() solves the issue
-	timer := time.NewTimer(config.Options.Delay)
-
 	ActorID = getActorID(event)
 	ActorImage = getActorImage(event)
 	ActorName = getActorName(event)
@@ -87,11 +81,6 @@ func processEvent(event events.Message) {
 	// send notifications to various reporters
 	// function will finish when all reporters finished
 	sendNotifications(timestamp, message, title, config.Reporters)
-
-	// block function until time (delay) triggers
-	// if sendNotifications is faster than the delay, function blocks here until delay is over
-	// if sendNotifications takes longer than the delay, trigger already fired and no delay is added
-	<-timer.C
 
 }
 

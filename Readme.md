@@ -69,7 +69,6 @@ Currently the following options can be set via `config.yml`
 ```yaml
 ---
 options:
-  delay: 500ms
   filter_strings: ["type=container"]
   exclude_strings: ["Action=exec_start", "Action=exec_die", "Action=exec_create"]
   log_level: debug
