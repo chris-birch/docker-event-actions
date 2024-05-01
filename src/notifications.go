@@ -22,7 +22,6 @@ type ReporterError struct {
 func sendNotifications(timestamp time.Time, message string, title string, reporters []string) {
 	// Sending messages to different services as goroutines concurrently
 	// Adding a wait group here to delay execution until all functions return,
-	// otherwise delaying in processEvent() would not make any sense
 
 	var wg sync.WaitGroup
 	var ReporterErrors []ReporterError
