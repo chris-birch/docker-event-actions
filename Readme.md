@@ -37,8 +37,6 @@ docker pull ghcr.io/yubiuser/docker-event-monitor:latest
 ### Docker compose
 
 ```yaml
-version: '2.4'
-
 services:
   docker-event-monitor:
     container_name: docker-event-monitor
@@ -46,30 +44,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/localtime:/etc/localtime:ro
+      - ./config.yml:/config.yml:ro
     restart: unless-stopped
-    environment:
-      PUSHOVER: false
-      PUSHOVER_USER: 'USER'
-      PUSHOVER_APITOKEN: 'TOKEN'
-      GOTIFY: false
-      GOTIFY_URL: 'URL'
-      GOTIFY_TOKEN: 'TOKEN'
-      MAIL: false
-      MAIL_FROM: 'your.username@provider.com'
-      MAIL_TO: 'recipient@provider.com'
-      MAIL_USER: 'SMTP USER'
-      MAIL_PASSWORD: 'PASSWORD'
-      MAIL_PORT: 587
-      MAIL_HOST: 'smtp@provider.com'
-      MATTERMOST: false
-      MATTERMOST_URL: 'URL'
-      MATTERMOST_CHANNEL: 'Channel'
-      MATTERMOST_USER: 'User'
-      FILTER: 'type=container'
-      EXCLUDE: 'Action=exec_start,Action=exec_die,Action=exec_create'
-      DELAY: '500ms'
-      LOG_LEVEL: 'info'
-      SERVER_TAG: ''
 ```
 
 ### Build image locally
@@ -85,34 +61,44 @@ docker build -t docker-event-monitor:local .
 
 If you have a suitable `Go` environment set up, you can build the binary from `/src/`. For development, a `devcontainer` with a suitable `Dockerfile` is provided as well. If you run `make build` instead of `go build`, `git` commit/branch/date information are injected into to binary.
 
-### Environment variables and configuration
+### Configuration
 
-Configurations can use the CLI flags or environment variables. The table below outlines all supported options and their respective env vars.
+Configuration is loaded from a config file, by defaut `config.yml`. The path can be adjusted by `docker-event-monitor --config [path]`.
+Currently the following options can be set via `config.yml`
 
-| Flag                  | Env Variable            | Default | Details |
-| ----------------      | ----------------------  | ------- |-------- |
-| `--pushover`          | `PUSHOVER`              | `false` | Enable/Disable Pushover notification|
-| `--pushoverapitoken`  | `PUSHOVER_APITOKEN`     | `""`    | |
-| `--pushoveruserkey`   | `PUSHOVER_USER`         | `""`    | |
-| `--delay`             | `DELAY`                 | `500ms` | Delay befor processing next event. Can be useful if messages arrive in wrong order |
-| `--gotify`            | `GOTIFY`                | `false` | Enable/Disable Gotify notification|
-| `--gotifyurl`         | `GOTIFY_URL`            | `""`    | |
-| `--gotifytoken`       | `GOTIFY_TOKEN`          | `""`    | |
-| `--mail`              | `MAIL`                  | `false` | Enable/Disable E-Mail (SMTP) notification|
-| `--mailfrom`          | `MAIL_FROM`             | `""`    | optional: `your.username@provider.com`, set to MAIL_USER if empty/unset |
-| `--mailto`            | `MAIL_TO`               | `""`    | `recipient@provider.com` |
-| `--mailuser`          | `MAIL_USER`             | `""`    | SMTP username |
-| `--mailpassword`      | `MAIL_PASSWORD`         | `""`    | |
-| `--mailport`          | `MAIL_PORT`             | `587`   | |
-| `--mailhost`          | `MAIL_HOST`             | `""`    | `smtp@provider.com` |
-| `--mattermost`        | `MATTERMOST`            | `false` | Enable/Disable Mattermost notification|
-| `--mattermosturl`     | `MATTERMOST_URL`        | `""`    | |
-| `--mattermostchannel` | `MATTERMOST_CHANNEL`    | `""`    | optional |
-| `--mattermostuser`    | `MATTERMOST_USER`       | `"Docker Event Monitor"` | |
-| `--filter`            | `FILTER`                | `""`    | Filter events. Uses the same filters as `docker events` (see [here](https://docs.docker.com/engine/reference/commandline/events/#filter))    |
-| `--exclude`           | `EXCLUDE`               | `""`    | Exclude events from being reported |
-| `--loglevel`          | `LOG_LEVEL`             | `"info"`| Use `debug` for more verbose logging |
-| `--servertag`         | `SERVER_TAG`            | `""`    | Prefix to include in the title of notifications. Useful when running docker-event-monitors on multiple machines |
+```yaml
+---
+options:
+  delay: 500ms
+  filter_strings: ["type=container"]
+  exclude_strings: ["Action=exec_start", "Action=exec_die", "Action=exec_create"]
+  log_level: debug
+  server_tag: My Server
+
+reporter:
+  pushover:
+    enabled: true
+    api_token: xyz
+    user_key: abc
+  gotify:
+    enabled: true
+    url: http://gotify.lan
+    token: xyz
+  mail:
+    enabled: true
+    from: your.username@provider.com
+    to: recipient@provider.com
+    user: SMTP Username
+    password: SMTP Password
+    port: 587
+    host: SMTP Host
+  mattermost:
+    enabled: true
+    url: http://mattermost.lan
+    channel: Docker Event Channel
+    user: Docker Event Bot
+
+```
 
 ### Filter and exclude events
 

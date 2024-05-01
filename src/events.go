@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/events"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -21,7 +22,7 @@ func processEvent(event events.Message) {
 	// Sometimes events are pushed through the event channel really quickly, but they arrive on the notification clients in
 	// wrong order (probably due to message delivery time), e.g. Pushover is susceptible for this.
 	// Finishing this function not before a certain time before draining the next event from the event channel in main() solves the issue
-	timer := time.NewTimer(glb_arguments.Delay)
+	timer := time.NewTimer(config.Options.Delay)
 
 	ActorID = getActorID(event)
 	ActorImage = getActorImage(event)
@@ -72,7 +73,7 @@ func processEvent(event events.Message) {
 	message := strings.TrimRight(msg_builder.String(), "\n")
 
 	// Log message
-	logger.Info().
+	log.Info().
 		Str("eventType", string(event.Type)).
 		Str("ActorID", ActorID).
 		Str("eventAction", string(event.Action)).
@@ -85,7 +86,7 @@ func processEvent(event events.Message) {
 
 	// send notifications to various reporters
 	// function will finish when all reporters finished
-	sendNotifications(timestamp, message, title, glb_arguments.Reporters)
+	sendNotifications(timestamp, message, title, config.Reporters)
 
 	// block function until time (delay) triggers
 	// if sendNotifications is faster than the delay, function blocks here until delay is over
@@ -155,22 +156,22 @@ func excludeEvent(event events.Message) bool {
 	eventMap := structToFlatMap(event)
 
 	// Check for all exclude key -> value combinations if they match the event
-	for key, values := range glb_arguments.Exclude {
+	for key, values := range config.Exclude {
 		eventValue, keyExist := eventMap[key]
 
 		// Check if the exclusion key exists in the eventMap
 		if !keyExist {
-			logger.Debug().
+			log.Debug().
 				Str("ActorID", ActorID).
 				Msgf("Exclusion key \"%s\" did not match", key)
 			return false
 		}
 
-		logger.Debug().
+		log.Debug().
 			Str("ActorID", ActorID).
 			Msgf("Exclusion key \"%s\" matched, checking values", key)
 
-		logger.Debug().
+		log.Debug().
 			Str("ActorID", ActorID).
 			Msgf("Event's value for key \"%s\" is \"%s\"", key, eventValue)
 
@@ -180,13 +181,13 @@ func excludeEvent(event events.Message) bool {
 			// see https://github.com/moby/moby/blob/bf053be997f87af233919a76e6ecbd7d17390e62/api/types/events/events.go#L74-L81
 
 			if strings.HasPrefix(eventValue, value) {
-				logger.Debug().
+				log.Debug().
 					Str("ActorID", ActorID).
 					Msgf("Event excluded based on exclusion setting \"%s=%s\"", key, value)
 				return true
 			}
 		}
-		logger.Debug().
+		log.Debug().
 			Str("ActorID", ActorID).
 			Msgf("Exclusion key \"%s\" matched, but values did not match", key)
 	}
@@ -224,7 +225,7 @@ func structToFlatMap(s interface{}) map[string]string {
 	m := make(map[string]interface{})
 	b, err := json.Marshal(s)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Marshaling JSON failed")
+		log.Fatal().Err(err).Msg("Marshaling JSON failed")
 	}
 
 	// Using a custom decoder to set 'UseNumber' which will preserver a string representation of
@@ -232,7 +233,7 @@ func structToFlatMap(s interface{}) map[string]string {
 	decoder := json.NewDecoder(strings.NewReader(string(b)))
 	decoder.UseNumber()
 	if err := decoder.Decode(&m); err != nil {
-		logger.Fatal().Err(err).Msg("Unmarshaling JSON failed")
+		log.Fatal().Err(err).Msg("Unmarshaling JSON failed")
 	}
 	return flattenMap("", m)
 }

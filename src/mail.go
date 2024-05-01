@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func buildEMail(timestamp time.Time, from string, to []string, subject string, body string) string {
@@ -26,13 +28,13 @@ func sendMail(timestamp time.Time, message string, title string, errCh chan Repo
 		Reporter: "Mail",
 	}
 
-	from := glb_arguments.MailFrom
-	to := []string{glb_arguments.MailTo}
-	username := glb_arguments.MailUser
-	password := glb_arguments.MailPassword
+	from := config.Reporter.Mail.From
+	to := []string{config.Reporter.Mail.To}
+	username := config.Reporter.Mail.User
+	password := config.Reporter.Mail.Password
 
-	host := glb_arguments.MailHost
-	port := strconv.Itoa(glb_arguments.MailPort)
+	host := config.Reporter.Mail.Host
+	port := strconv.Itoa(config.Reporter.Mail.Port)
 	address := host + ":" + port
 
 	subject := title
@@ -44,7 +46,7 @@ func sendMail(timestamp time.Time, message string, title string, errCh chan Repo
 
 	err := smtp.SendMail(address, auth, from, to, []byte(mail))
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", "Mail").Msg("")
+		log.Error().Err(err).Str("reporter", "Mail").Msg("")
 		e.Error = errors.New("failed to send mail")
 		errCh <- e
 		return

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type PushoverMessage struct {
@@ -19,8 +21,8 @@ func sendPushover(timestamp time.Time, message string, title string, errCh chan 
 	// Send a message to Pushover
 
 	m := PushoverMessage{
-		Token:     glb_arguments.PushoverAPIToken,
-		User:      glb_arguments.PushoverUserKey,
+		Token:     config.Reporter.Pushover.APIToken,
+		User:      config.Reporter.Pushover.UserKey,
 		Title:     title,
 		Message:   message,
 		Timestamp: strconv.FormatInt(timestamp.Unix(), 10),
@@ -32,7 +34,7 @@ func sendPushover(timestamp time.Time, message string, title string, errCh chan 
 
 	messageJSON, err := json.Marshal(m)
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", "Pushover").Msg("Failed to marshal JSON")
+		log.Error().Err(err).Str("reporter", "Pushover").Msg("Failed to marshal JSON")
 		e.Error = errors.New("failed to marshal JSON")
 		errCh <- e
 		return

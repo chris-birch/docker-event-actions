@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Adapted from https://github.com/mdeheij/mattergo
@@ -18,8 +20,8 @@ type MattermostMessage struct {
 func sendMattermost(message string, title string, errCh chan ReporterError) {
 
 	m := MattermostMessage{
-		Username: glb_arguments.MattermostUser,
-		Channel:  glb_arguments.MattermostChannel,
+		Username: config.Reporter.Mattermost.User,
+		Channel:  config.Reporter.Mattermost.Channel,
 		Text:     "##### " + title + "\n" + message,
 	}
 
@@ -29,13 +31,13 @@ func sendMattermost(message string, title string, errCh chan ReporterError) {
 
 	messageJSON, err := json.Marshal(m)
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", "Mattermost").Msg("Failed to marshal JSON")
+		log.Error().Err(err).Str("reporter", "Mattermost").Msg("Failed to marshal JSON")
 		e.Error = errors.New("failed to marshal JSON")
 		errCh <- e
 		return
 	}
 
-	err = sendhttpMessage("Mattermost", glb_arguments.MattermostURL, messageJSON)
+	err = sendhttpMessage("Mattermost", config.Reporter.Mattermost.URL, messageJSON)
 	if err != nil {
 		e.Error = err
 		errCh <- e

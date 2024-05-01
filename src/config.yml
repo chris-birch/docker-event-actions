@@ -1,0 +1,31 @@
+---
+options:
+  delay: 500ms
+  filter_strings: ["type=container"]
+  exclude_strings: ["Action=exec_start", "Action=exec_die", "Action=exec_create"]
+  log_level: debug
+  server_tag: My Server
+
+reporter:
+  pushover:
+    enabled: true
+    api_token: xyz
+    user_key: abc
+  gotify:
+    enabled: true
+    url: http://gotify.lan
+    token: xyz
+  mail:
+    enabled: true
+    from: your.username@provider.com
+    to: recipient@provider.com
+    user: SMTP Username
+    password: SMTP Password
+    port: 587
+    host: SMTP Host
+  mattermost:
+    enabled: true
+    url: http://mattermost.lan
+    channel: Docker Event Channel
+    user: Docker Event Bot
+
