@@ -69,38 +69,8 @@ func buildStartupMessage(timestamp time.Time) string {
 
 func logArguments() {
 	log.Info().
-		Dict("options", zerolog.Dict().
-			Dict("reporter", zerolog.Dict().
-				Dict("Pushover", zerolog.Dict().
-					Bool("Enabled", config.Reporter.Pushover.Enabled).
-					Str("PushoverAPIToken", config.Reporter.Pushover.APIToken).
-					Str("PushoverUserKey", config.Reporter.Pushover.UserKey),
-				).
-				Dict("Gotify", zerolog.Dict().
-					Bool("Enabled", config.Reporter.Gotify.Enabled).
-					Str("GotifyURL", config.Reporter.Gotify.URL).
-					Str("GotifyToken", config.Reporter.Gotify.Token),
-				).
-				Dict("Mail", zerolog.Dict().
-					Bool("Enabled", config.Reporter.Mail.Enabled).
-					Str("MailFrom", config.Reporter.Mail.From).
-					Str("MailTo", config.Reporter.Mail.To).
-					Str("MailHost", config.Reporter.Mail.Host).
-					Str("MailUser", config.Reporter.Mail.User).
-					Int("Port", config.Reporter.Mail.Port),
-				).
-				Dict("Mattermost", zerolog.Dict().
-					Bool("Enabled", config.Reporter.Mattermost.Enabled).
-					Str("MattermostURL", config.Reporter.Mattermost.URL).
-					Str("MattermostChannel", config.Reporter.Mattermost.Channel).
-					Str("MattermostUser", config.Reporter.Mattermost.User),
-				),
-			).
-			Str("Loglevel", config.Options.LogLevel).
-			Str("ServerTag", config.Options.ServerTag).
-			Str("Filter", strings.Join(config.Options.FilterStrings, " ")).
-			Str("Exclude", strings.Join(config.Options.ExcludeStrings, " ")),
-		).
+		Interface("options", config.Options).
+		Interface("reporter", config.Reporter).
 		Dict("version", zerolog.Dict().
 			Str("Version", version).
 			Str("Branch", branch).
