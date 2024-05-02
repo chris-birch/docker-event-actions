@@ -145,16 +145,16 @@ func parseArgs() {
 	//Parse Enabled reportes
 
 	if config.Reporter.Gotify.Enabled {
-		config.Reporters = append(config.Reporters, "Gotify")
+		config.EnabledReporter = append(config.EnabledReporter, "Gotify")
 	}
 	if config.Reporter.Mattermost.Enabled {
-		config.Reporters = append(config.Reporters, "Mattermost")
+		config.EnabledReporter = append(config.EnabledReporter, "Mattermost")
 	}
 	if config.Reporter.Pushover.Enabled {
-		config.Reporters = append(config.Reporters, "Pushover")
+		config.EnabledReporter = append(config.EnabledReporter, "Pushover")
 	}
 	if config.Reporter.Mail.Enabled {
-		config.Reporters = append(config.Reporters, "Mail")
+		config.EnabledReporter = append(config.EnabledReporter, "Mail")
 	}
 
 }
@@ -182,7 +182,7 @@ func main() {
 
 	timestamp := time.Now()
 	startup_message := buildStartupMessage(timestamp)
-	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.Reporters)
+	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.EnabledReporter)
 
 	filterArgs := filters.NewArgs()
 	for key, values := range config.Filter {
