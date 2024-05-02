@@ -95,56 +95,6 @@ func init() {
 	}
 }
 
-func main() {
-	// if the -v flag was set, print version information and exit
-	if showVersion {
-		printVersion()
-	}
-
-	// log all supplied arguments
-	logArguments()
-
-	timestamp := time.Now()
-	startup_message := buildStartupMessage(timestamp)
-	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.Reporters)
-
-	filterArgs := filters.NewArgs()
-	for key, values := range config.Filter {
-		for _, value := range values {
-			filterArgs.Add(key, value)
-		}
-	}
-
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create new docker client")
-	}
-	defer cli.Close()
-
-	// receives events from the channel
-	event_chan, errs := cli.Events(context.Background(), types.EventsOptions{Filters: filterArgs})
-
-	for {
-		select {
-		case err := <-errs:
-			log.Fatal().Err(err).Msg("")
-		case event := <-event_chan:
-			// if logging level is debug, log the event
-			log.Debug().
-				Interface("event", event).Msg("")
-
-			// Check if event should be exlcuded from reporting
-			if len(config.Exclude) > 0 {
-				log.Debug().Msg("Performing check for event exclusion")
-				if excludeEvent(event) {
-					break //breaks out of the select and waits for the next event to arrive
-				}
-			}
-			processEvent(event)
-		}
-	}
-}
-
 func loadConfig() {
 	configFile, err := filepath.Abs(configFilePath)
 
@@ -219,4 +169,54 @@ func configureLogger() {
 
 	// Add timestamp and service string
 	log.Logger = log.With().Timestamp().Str("service", "docker event monitor").Logger()
+}
+
+func main() {
+	// if the -v flag was set, print version information and exit
+	if showVersion {
+		printVersion()
+	}
+
+	// log all supplied arguments
+	logArguments()
+
+	timestamp := time.Now()
+	startup_message := buildStartupMessage(timestamp)
+	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.Reporters)
+
+	filterArgs := filters.NewArgs()
+	for key, values := range config.Filter {
+		for _, value := range values {
+			filterArgs.Add(key, value)
+		}
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create new docker client")
+	}
+	defer cli.Close()
+
+	// receives events from the channel
+	event_chan, errs := cli.Events(context.Background(), types.EventsOptions{Filters: filterArgs})
+
+	for {
+		select {
+		case err := <-errs:
+			log.Fatal().Err(err).Msg("")
+		case event := <-event_chan:
+			// if logging level is debug, log the event
+			log.Debug().
+				Interface("event", event).Msg("")
+
+			// Check if event should be exlcuded from reporting
+			if len(config.Exclude) > 0 {
+				log.Debug().Msg("Performing check for event exclusion")
+				if excludeEvent(event) {
+					break //breaks out of the select and waits for the next event to arrive
+				}
+			}
+			processEvent(event)
+		}
+	}
 }
