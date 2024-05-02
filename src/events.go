@@ -80,7 +80,7 @@ func processEvent(event events.Message) {
 
 	// send notifications to various reporters
 	// function will finish when all reporters finished
-	sendNotifications(timestamp, message, title, config.Reporters)
+	sendNotifications(timestamp, message, title, config.EnabledReporter)
 
 }
 
