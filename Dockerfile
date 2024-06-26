@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 
 # Download dependencies first to cache them
 WORKDIR /app
-COPY ./src/go.mod ./src/go.sum ./
+COPY ./go.mod ./go.sum ./
 RUN go mod download
 
 # Copy the source code and build
