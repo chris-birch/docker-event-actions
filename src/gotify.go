@@ -2,6 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 type GotifyMessage struct {
@@ -9,7 +12,7 @@ type GotifyMessage struct {
 	Message string `json:"message"`
 }
 
-func sendGotify(message string, title string) {
+func sendGotify(message string, title string, errCh chan ReporterError) {
 	// Send a message to Gotify
 
 	m := GotifyMessage{
@@ -17,12 +20,23 @@ func sendGotify(message string, title string) {
 		Message: message,
 	}
 
+	e := ReporterError{
+		Reporter: "Gotify",
+	}
+
 	messageJSON, err := json.Marshal(m)
 	if err != nil {
-		logger.Error().Err(err).Str("reporter", "Gotify").Msg("Faild to marshal JSON")
+		log.Error().Err(err).Str("reporter", "Gotify").Msg("Failed to marshal JSON")
+		e.Error = errors.New("failed to marshal JSON")
+		errCh <- e
 		return
 	}
 
-	sendhttpMessage("Gotify", glb_arguments.GotifyURL+"/message?token="+glb_arguments.GotifyToken, messageJSON)
+	err = sendhttpMessage("Gotify", config.Reporter.Gotify.URL+"/message?token="+config.Reporter.Gotify.Token, messageJSON)
+	if err != nil {
+		e.Error = err
+		errCh <- e
+		return
+	}
 
 }

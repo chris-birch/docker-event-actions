@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-ARG alpine_version=3.19
-ARG golang_version=1.21
+ARG alpine_version=3.20
+ARG golang_version=1.23
 
-FROM golang:${golang_version}-alpine${alpine_version} as builder
+FROM golang:${golang_version}-alpine${alpine_version} AS builder
 ARG GIT_COMMIT
 ARG GIT_BRANCH
 ARG GIT_VERSION
@@ -13,13 +13,17 @@ RUN apk add --no-cache \
                 git \
                 make
 
-COPY /src /src
-WORKDIR /src
+# Download dependencies first to cache them
+WORKDIR /app
+COPY ./go.mod ./go.sum ./
+RUN go mod download
+
+# Copy the source code and build
+COPY /src ./
 RUN make build
 
-FROM scratch as deploy
-COPY --from=builder /src/docker-event-monitor docker-event-monitor
-# the tls certificates:
-# this pulls directly from the upstream image, which already has ca-certificates:
+FROM scratch AS deploy
+COPY --from=builder /app/docker-event-monitor docker-event-monitor
+# this pulls directly from the upstream image, which already has ca-certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/docker-event-monitor"]
