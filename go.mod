@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/docker/docker v27.2.0+incompatible
 	github.com/rs/zerolog v1.33.0
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
