@@ -1,6 +1,7 @@
 module docker-event-monitor
 
 go 1.23
+toolchain go1.23.0
 
 require (
 	github.com/docker/docker v27.2.1+incompatible
