@@ -90,3 +90,12 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
+      id: codeql_analysis
+
+    - name: Upload CodeQL results as an artifact
+      if: success() || failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-results
+        path: ${{ steps.codeql_analysis.outputs.sarif-output }}
+        retention-days: 5
