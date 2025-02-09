@@ -64,7 +64,6 @@ func processEvent(event events.Message) {
 
 	// Build message and title
 	title := title_builder.String()
-	//message := strings.TrimRight(msg_builder.String(), "\n")
 
 	// Log message
 	log.Info().

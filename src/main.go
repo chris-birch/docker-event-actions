@@ -4,12 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/docker/docker/api/types/events"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"gopkg.in/yaml.v3"
@@ -48,7 +48,7 @@ func init() {
 	configureLogger()
 	loadConfig()
 
-	// after loading the config, we we migth increase log level
+	// after loading the config, check log level
 	if config.Options.LogLevel == "debug" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
@@ -112,8 +112,9 @@ func configureLogger() {
 	// Default level is info
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	// Add timestamp and service string
-	log.Logger = log.With().Timestamp().Str("service", "docker event monitor").Logger()
+	// Add timestamp and pretty output
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+	log.Logger = zerolog.New(output).With().Timestamp().Logger()
 }
 
 func main() {
@@ -136,21 +137,26 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create new docker client")
 	}
-	defer cli.Close()
+	defer func(cli *client.Client) {
+		err := cli.Close()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to close docker client")
+		}
+	}(cli)
 
 	// receives events from the channel
-	event_chan, errs := cli.Events(context.Background(), types.EventsOptions{Filters: filterArgs})
+	eventChan, errs := cli.Events(context.Background(), events.ListOptions{Filters: filterArgs})
 
 	for {
 		select {
 		case err := <-errs:
 			log.Fatal().Err(err).Msg("")
-		case event := <-event_chan:
+		case event := <-eventChan:
 			// if logging level is debug, log the event
 			log.Debug().
 				Interface("event", event).Msg("")
 
-			// Check if event should be exlcuded from reporting
+			// Check if event should be excluded from reporting
 			if len(config.Exclude) > 0 {
 				log.Debug().Msg("Performing check for event exclusion")
 				if excludeEvent(event) {
