@@ -54,45 +54,6 @@ func init() {
 	}
 
 	parseArgs()
-
-	if config.Reporter.Pushover.Enabled {
-		if len(config.Reporter.Pushover.APIToken) == 0 {
-			log.Fatal().Msg("Pushover Enabled. Pushover API token required!")
-		}
-		if len(config.Reporter.Pushover.UserKey) == 0 {
-			log.Fatal().Msg("Pushover Enabled. Pushover user key required!")
-		}
-	}
-	if config.Reporter.Gotify.Enabled {
-		if len(config.Reporter.Gotify.URL) == 0 {
-			log.Fatal().Msg("Gotify Enabled. Gotify URL required!")
-		}
-		if len(config.Reporter.Gotify.Token) == 0 {
-			log.Fatal().Msg("Gotify Enabled. Gotify APP token required!")
-		}
-	}
-	if config.Reporter.Mail.Enabled {
-		if len(config.Reporter.Mail.User) == 0 {
-			log.Fatal().Msg("E-Mail notification Enabled. SMTP username required!")
-		}
-		if len(config.Reporter.Mail.To) == 0 {
-			log.Fatal().Msg("E-Mail notification Enabled. Recipient address required!")
-		}
-		if len(config.Reporter.Mail.From) == 0 {
-			config.Reporter.Mail.From = config.Reporter.Mail.User
-		}
-		if len(config.Reporter.Mail.Password) == 0 {
-			log.Fatal().Msg("E-Mail notification Enabled. SMTP Password required!")
-		}
-		if len(config.Reporter.Mail.Host) == 0 {
-			log.Fatal().Msg("E-Mail notification Enabled. SMTP host address required!")
-		}
-	}
-	if config.Reporter.Mattermost.Enabled {
-		if len(config.Reporter.Mattermost.URL) == 0 {
-			log.Fatal().Msg("Mattermost Enabled. Mattermost URL required!")
-		}
-	}
 }
 
 func loadConfig() {
@@ -141,22 +102,6 @@ func parseArgs() {
 		val := exclude[pos+1:]
 		config.Exclude[key] = append(config.Exclude[key], val)
 	}
-
-	//Parse Enabled reportes
-
-	if config.Reporter.Gotify.Enabled {
-		config.EnabledReporter = append(config.EnabledReporter, "Gotify")
-	}
-	if config.Reporter.Mattermost.Enabled {
-		config.EnabledReporter = append(config.EnabledReporter, "Mattermost")
-	}
-	if config.Reporter.Pushover.Enabled {
-		config.EnabledReporter = append(config.EnabledReporter, "Pushover")
-	}
-	if config.Reporter.Mail.Enabled {
-		config.EnabledReporter = append(config.EnabledReporter, "Mail")
-	}
-
 }
 
 func configureLogger() {
@@ -179,10 +124,6 @@ func main() {
 
 	// log all supplied arguments
 	logArguments()
-
-	timestamp := time.Now()
-	startup_message := buildStartupMessage(timestamp)
-	sendNotifications(timestamp, startup_message, "Starting docker event monitor", config.EnabledReporter)
 
 	filterArgs := filters.NewArgs()
 	for key, values := range config.Filter {
