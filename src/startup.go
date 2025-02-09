@@ -15,35 +15,6 @@ func buildStartupMessage(timestamp time.Time) string {
 	startup_message_builder.WriteString("Docker event monitor started at " + timestamp.Format(time.RFC1123Z) + "\n")
 	startup_message_builder.WriteString("Docker event monitor version: " + version + "\n")
 
-	if config.Reporter.Pushover.Enabled {
-		startup_message_builder.WriteString("Pushover notification Enabled")
-	} else {
-		startup_message_builder.WriteString("Pushover notification disabled")
-	}
-
-	if config.Reporter.Gotify.Enabled {
-		startup_message_builder.WriteString("\nGotify notification Enabled")
-	} else {
-		startup_message_builder.WriteString("\nGotify notification disabled")
-	}
-	if config.Reporter.Mail.Enabled {
-		startup_message_builder.WriteString("\nE-Mail notification Enabled")
-	} else {
-		startup_message_builder.WriteString("\nE-Mail notification disabled")
-	}
-
-	if config.Reporter.Mattermost.Enabled {
-		startup_message_builder.WriteString("\nMattermost notification Enabled")
-		if config.Reporter.Mattermost.Channel != "" {
-			startup_message_builder.WriteString("\nMattermost channel: " + config.Reporter.Mattermost.Channel)
-		}
-		if config.Reporter.Mattermost.User != "" {
-			startup_message_builder.WriteString("\nMattermost username: " + config.Reporter.Mattermost.User)
-		}
-	} else {
-		startup_message_builder.WriteString("\nMattermost notification disabled")
-	}
-
 	startup_message_builder.WriteString("\nLog level: " + config.Options.LogLevel)
 
 	if config.Options.ServerTag != "" {
@@ -70,7 +41,6 @@ func buildStartupMessage(timestamp time.Time) string {
 func logArguments() {
 	log.Info().
 		Interface("options", config.Options).
-		Interface("reporter", config.Reporter).
 		Dict("version", zerolog.Dict().
 			Str("Version", version).
 			Str("Branch", branch).

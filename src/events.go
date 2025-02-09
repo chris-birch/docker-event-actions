@@ -64,7 +64,7 @@ func processEvent(event events.Message) {
 
 	// Build message and title
 	title := title_builder.String()
-	message := strings.TrimRight(msg_builder.String(), "\n")
+	//message := strings.TrimRight(msg_builder.String(), "\n")
 
 	// Log message
 	log.Info().
@@ -77,11 +77,6 @@ func processEvent(event events.Message) {
 		Str("DockerComposeContext", event.Actor.Attributes["com.docker.compose.project.working_dir"]).
 		Str("DockerComposeService", event.Actor.Attributes["com.docker.compose.service"]).
 		Msg(title)
-
-	// send notifications to various reporters
-	// function will finish when all reporters finished
-	sendNotifications(timestamp, message, title, config.EnabledReporter)
-
 }
 
 func getActorID(event events.Message) string {
