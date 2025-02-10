@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/chris-birch/docker-event-actions/src/technitium"
 	"strings"
 	"time"
 
@@ -76,6 +77,8 @@ func processEvent(event events.Message) {
 		Str("DockerComposeContext", event.Actor.Attributes["com.docker.compose.project.working_dir"]).
 		Str("DockerComposeService", event.Actor.Attributes["com.docker.compose.service"]).
 		Msg(title)
+
+	go func() { technitium.NewEvent(event).Process() }()
 }
 
 func getActorID(event events.Message) string {
