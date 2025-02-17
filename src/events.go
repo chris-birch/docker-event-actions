@@ -78,7 +78,15 @@ func processEvent(event events.Message) {
 		Str("DockerComposeService", event.Actor.Attributes["com.docker.compose.service"]).
 		Msg(title)
 
-	go func() { technitium.NewEvent(event).Process() }()
+	// Send the event to plugins
+	record, err := technitium.NewRecord(event) // Create a dns record with all the info we need to update technitium
+
+	if err != nil {
+		log.Error().Err(err).Msg("Error creating record")
+	} // Maybe we dont' have the right info
+
+	record.Process() // Send to a go channel so the order of events is maintained
+
 }
 
 func getActorID(event events.Message) string {
