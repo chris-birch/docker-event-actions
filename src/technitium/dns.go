@@ -33,6 +33,7 @@ func (t *Technitium) Init() {
 	t.client = conn
 	t.lock = make(chan bool, 1)
 	t.lock <- false
+	t.msg = make(chan *message.DnsRecord, 25)
 }
 func (t *Technitium) Close() {
 	err := t.client.Close()
@@ -44,41 +45,41 @@ func (t *Technitium) Close() {
 func (t *Technitium) SendMsg(rec *message.DnsRecord) {
 	select {
 	case <-t.lock: // Proceed only if unlocked
-		t.msg = make(chan *message.DnsRecord, 5)
+		log.Debug().Msg("Create new service routine and send msg")
 		t.msg <- rec
-		fmt.Println("lock")
 
 		go func(msg chan *message.DnsRecord) { // Start gRPC stream
-			fmt.Println("channel routine start")
+			log.Debug().Msg("Starting gRPC service routine")
 
 			srv := service.NewTechnitiumServiceClient(t.client)
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
-			ticker := time.NewTicker(3 * time.Second)
+			ticker := time.NewTicker(2 * time.Second)
 			defer ticker.Stop()
 
 			trecord, err := srv.ProcessRecord(ctx)
 			if err != nil {
-				log.Fatal().Msgf("could not process record: %v", err)
+				log.Error().Msgf("could not setup ClientStreamingClient: %v", err)
 			}
 
 		loop:
 			for {
 				select {
 				case chmsg := <-msg:
+					log.Debug().Msgf("Sending msg to gRPC server: %v", chmsg)
 					err := trecord.Send(chmsg)
 					if err != nil {
 						log.Fatal().Msgf("could not send message: %v", err.Error())
 					}
 					ticker.Reset(2 * time.Second)
 				case <-ticker.C:
-					fmt.Println("ticker tick")
+					log.Debug().Msg("gRPC service routine timeout. Exiting loop.")
 					break loop
 				}
 			}
 
-			// Finished sending msg
+			// Finished sending all msg
 			err = trecord.CloseSend()
 			if err != nil {
 				log.Fatal().Msgf("could not close: %v", err)
@@ -88,13 +89,15 @@ func (t *Technitium) SendMsg(rec *message.DnsRecord) {
 		}(t.msg)
 
 	default:
+		log.Debug().Msg("Sending record to exiting service routine")
 		t.msg <- rec
-		fmt.Println("Default")
 	}
 }
 
 func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, error) {
 	// Validate event data
+
+	// Ignore destroy actions
 
 	//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
 	//	return nil, errors.New("event does not contain hostname or domain")
@@ -106,11 +109,6 @@ func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, erro
 		return nil, err
 	}
 
-	//rec := new(Record)
-	//rec.dnsRecordName = inspect.Config.Hostname
-	//rec.dnsRecordType = event.Actor.Attributes["type"]
-	//rec.dnsRecordData = string(event.Action)
-
 	rec := message.DnsRecord{
 		Name: inspect.Config.Hostname,
 		Type: message.Type_TYPE_CNAME,
@@ -119,40 +117,3 @@ func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, erro
 
 	return &rec, nil
 }
-
-//func Process(record *Record, c *Client) {
-//
-//	// Process event and create pb message
-//	// Create new go routine that handles all streaming (including setting up and taking down the client)
-//	// Send pb messages to this routine via a channel
-//	// When the client is taken down and the stream closed, end the routine
-//	// Check if we already have a routine using a chanel block (unblocked when the routine ends)
-//	// Use a select to check on the routine status
-//	// The gRPC client should be ended when main() ends, same as the docker one
-//
-//	srv := service.NewTechnitiumServiceClient(c.conn)
-//	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-//	defer cancel()
-//
-//	trecord, err := srv.ProcessRecord(ctx)
-//	if err != nil {
-//		log.Fatalf("could not process record: %v", err)
-//	}
-//
-//	rec := message.DnsRecord{
-//		Name: record.dnsRecordName,
-//		Type: message.Type_TYPE_CNAME,
-//		Data: record.dnsRecordData,
-//	}
-//
-//	err = trecord.Send(&rec)
-//	if err != nil {
-//		log.Fatalf("could not send dns record: %v", err)
-//	}
-//
-//	err = trecord.CloseSend()
-//	if err != nil {
-//		log.Fatalf("could not close: %v", err)
-//	}
-//
-//}

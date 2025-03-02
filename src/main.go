@@ -176,9 +176,10 @@ func main() {
 			rec, err := technitium.NewRecord(event, cli)
 			if err != nil {
 				log.Err(err).Msg("Failed to create technitium record")
+			} else {
+				// Send record to gRPC server if we don't have any record errors
+				tech.SendMsg(rec)
 			}
-			// Send to backend
-			tech.SendMsg(rec)
 		}
 	}
 }
