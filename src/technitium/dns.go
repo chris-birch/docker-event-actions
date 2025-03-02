@@ -50,7 +50,7 @@ func (t *Technitium) SendMsg(rec *message.DnsRecord) {
 		t.msg <- rec
 
 		go func(msg chan *message.DnsRecord) { // Start gRPC stream
-			log.Debug().Msg("Starting gRPC service routine")
+			log.Debug().Msg("Started gRPC service routine")
 
 			srv := service.NewTechnitiumServiceClient(t.client)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -123,7 +123,7 @@ func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, erro
 		return rec, nil
 
 	default:
-		log.Debug().Msgf("Ignoring container %v, event type %v", event.Actor.ID, event.Action)
+		log.Debug().Msgf("Ignoring container %v, with event type %v", event.Actor.ID, event.Action)
 		return nil, nil
 	}
 }
