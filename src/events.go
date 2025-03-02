@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/chris-birch/docker-event-actions/src/technitium"
 	"strings"
 	"time"
 
@@ -77,16 +76,6 @@ func processEvent(event events.Message) {
 		Str("DockerComposeContext", event.Actor.Attributes["com.docker.compose.project.working_dir"]).
 		Str("DockerComposeService", event.Actor.Attributes["com.docker.compose.service"]).
 		Msg(title)
-
-	// Send the event to plugins
-	record, err := technitium.NewRecord(event) // Create a dns record with all the info we need to update technitium
-
-	if err != nil {
-		log.Error().Err(err).Msg("Error creating record")
-	} // Maybe we dont' have the right info
-
-	record.Process() // Send to a go channel so the order of events is maintained
-
 }
 
 func getActorID(event events.Message) string {

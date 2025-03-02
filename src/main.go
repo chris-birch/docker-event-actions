@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/chris-birch/docker-event-actions/src/technitium"
 	"github.com/docker/docker/api/types/events"
 	"os"
 	"path/filepath"
@@ -137,15 +138,22 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create new docker client")
 	}
+
 	defer func(cli *client.Client) {
 		err := cli.Close()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to close docker client")
 		}
+		fmt.Println("here...")
 	}(cli)
 
 	// receives events from the channel
 	eventChan, errs := cli.Events(context.Background(), events.ListOptions{Filters: filterArgs})
+
+	// Setup Techchnitium package
+	tech := new(technitium.Technitium)
+	tech.Init()
+	defer tech.Close()
 
 	for {
 		select {
@@ -163,7 +171,14 @@ func main() {
 					break //breaks out of the select and waits for the next event to arrive
 				}
 			}
-			processEvent(event)
+
+			// Prepare DNS record
+			rec, err := technitium.NewRecord(event, cli)
+			if err != nil {
+				log.Err(err).Msg("Failed to create technitium record")
+			}
+			// Send to backend
+			tech.SendMsg(rec)
 		}
 	}
 }

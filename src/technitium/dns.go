@@ -1,147 +1,158 @@
 package technitium
 
 import (
-	"encoding/json"
-	"errors"
+	"context"
 	"fmt"
+	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/message"
+	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/service"
 	"github.com/docker/docker/api/types/events"
-	"github.com/enriquebris/goconcurrentqueue"
+	"github.com/docker/docker/client"
 	"github.com/rs/zerolog/log"
-	"io"
-	"net/http"
-	"sync"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"time"
 )
 
-const TOKEN = "0663aea32e1520aeefd175f8f9b9656394ac8012568259fd1dce0b0ebbe4bf18"
-
-type queue struct {
-	fifo *goconcurrentqueue.FIFO
-	done chan struct{}
-	wg   sync.WaitGroup
+type Technitium struct {
+	client *grpc.ClientConn
+	lock   chan bool
+	msg    chan *message.DnsRecord
 }
 
-func newQueue() *queue {
-	return new(queue)
-}
+func (t *Technitium) Init() {
+	// gRPC Client Setup
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-func (q *queue) init() {
-	q.fifo = goconcurrentqueue.NewFIFO()
-	q.done = make(chan struct{})
-
-	go func() {
-		q.wg.Wait()
-		q.done <- struct{}{}
-	}()
-
-	go func() {
-		for {
-			value, err := q.fifo.DequeueOrWaitForNextElement()
-			// switch on method to determine which func to call
-			updateDNS(&value)
-
-			log.Fatal().Err(err).Msg("Queue is full")
-			q.wg.Done()
-		}
-	}()
-
-}
-
-func (q *queue) push(r *Record) {
-	if q.done == nil {
-		q.init()
-	}
-
-	q.wg.Add(1)
-	err := q.fifo.Enqueue(r)
-
+	conn, err := grpc.NewClient("localhost:50051", opts...) //TODO get from envar
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal().Err(err).Msg("Failed to connect to server")
 	}
 
+	// Channel setup
+	t.client = conn
+	t.lock = make(chan bool, 1)
+	t.lock <- false
 }
-
-var q = newQueue()
-
-type Record struct {
-	dnsRecordName string
-	dnsRecordType string
-	dnsRecordData string
-}
-
-func NewRecord(event events.Message) (*Record, error) {
-
-	if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
-		return nil, errors.New("event does not contain hostname or domain")
-	}
-
-	rec := new(Record)
-	rec.dnsRecordName = event.Actor.Attributes["hostname"]
-	rec.dnsRecordType = event.Actor.Attributes["type"]
-	rec.dnsRecordData = event.Actor.Attributes["content"]
-
-	fmt.Println(rec.dnsRecordName, rec.dnsRecordType, rec.dnsRecordData)
-
-	return rec, nil
-}
-
-func (r *Record) Process() {
-	q.push(r)
-}
-
-func updateDNS(record Record) {
-	//baseUrl := "http://192.168.2.4:5380/api/zones/"
-
-	// Check if the domain already exists
-	//http://192.168.2.4:5380/api/zones/records/get
-	// token
-	// domain
-	// list zone = true
-	resp, err := http.Get("http://192.168.2.4:5380/api/zones/records/get")
+func (t *Technitium) Close() {
+	err := t.client.Close()
 	if err != nil {
-		fmt.Println("No response from request")
+		fmt.Println("Failed to close connection")
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body) // response body is []byte
-
-	var result dnsRecord
-
-	if err := json.Unmarshal(body, &result); err != nil { // Parse []byte to go struct pointer
-		fmt.Println("Can not unmarshal JSON")
-	}
-	PrettyPrint(result)
 }
 
-func PrettyPrint(i interface{}) string {
+func (t *Technitium) SendMsg(rec *message.DnsRecord) {
+	select {
+	case <-t.lock: // Proceed only if unlocked
+		t.msg = make(chan *message.DnsRecord, 5)
+		t.msg <- rec
+		fmt.Println("lock")
 
-	s, _ := json.MarshalIndent(i, "", "\t")
+		go func(msg chan *message.DnsRecord) { // Start gRPC stream
+			fmt.Println("channel routine start")
 
-	return string(s)
+			srv := service.NewTechnitiumServiceClient(t.client)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+			defer cancel()
 
+			ticker := time.NewTicker(3 * time.Second)
+			defer ticker.Stop()
+
+			trecord, err := srv.ProcessRecord(ctx)
+			if err != nil {
+				log.Fatal().Msgf("could not process record: %v", err)
+			}
+
+		loop:
+			for {
+				select {
+				case chmsg := <-msg:
+					err := trecord.Send(chmsg)
+					if err != nil {
+						log.Fatal().Msgf("could not send message: %v", err.Error())
+					}
+					ticker.Reset(2 * time.Second)
+				case <-ticker.C:
+					fmt.Println("ticker tick")
+					break loop
+				}
+			}
+
+			// Finished sending msg
+			err = trecord.CloseSend()
+			if err != nil {
+				log.Fatal().Msgf("could not close: %v", err)
+			}
+			t.lock <- false
+			return
+		}(t.msg)
+
+	default:
+		t.msg <- rec
+		fmt.Println("Default")
+	}
 }
 
-//resp, err := http.Get(url)
-//if err != nil {
-//	// we will get an error at this stage if the request fails, such as if the
-//	// requested URL is not found, or if the server is not reachable.
-//	log.Fatal().Err(err).Msg("Failed to send request")
-//}
-//defer resp.Body.Close()
+func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, error) {
+	// Validate event data
+
+	//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
+	//	return nil, errors.New("event does not contain hostname or domain")
+	//}
+
+	// Connect to Docker to get container info
+	inspect, err := c.ContainerInspect(context.Background(), event.Actor.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	//rec := new(Record)
+	//rec.dnsRecordName = inspect.Config.Hostname
+	//rec.dnsRecordType = event.Actor.Attributes["type"]
+	//rec.dnsRecordData = string(event.Action)
+
+	rec := message.DnsRecord{
+		Name: inspect.Config.Hostname,
+		Type: message.Type_TYPE_CNAME,
+		Data: string(event.Action),
+	}
+
+	return &rec, nil
+}
+
+//func Process(record *Record, c *Client) {
 //
-//// if we want to check for a specific status code, we can do so here
-//// for example, a successful request should return a 200 OK status
-//if resp.StatusCode != http.StatusOK {
-//	// if the status code is not 200, we should log the status code and the
-//	// status string, then exit with a fatal error
-//	//log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
-//	log.Printf("status code error: %d %s", resp.StatusCode, resp.Status)
-
-//}
-
-//// print the response
-//data, err := io.ReadAll(resp.Body)
-//if err != nil {
-//	log.Fatal().Err(err).Msg("Failed to read response")
-//}
-//fmt.Println(string(data))
+//	// Process event and create pb message
+//	// Create new go routine that handles all streaming (including setting up and taking down the client)
+//	// Send pb messages to this routine via a channel
+//	// When the client is taken down and the stream closed, end the routine
+//	// Check if we already have a routine using a chanel block (unblocked when the routine ends)
+//	// Use a select to check on the routine status
+//	// The gRPC client should be ended when main() ends, same as the docker one
+//
+//	srv := service.NewTechnitiumServiceClient(c.conn)
+//	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+//	defer cancel()
+//
+//	trecord, err := srv.ProcessRecord(ctx)
+//	if err != nil {
+//		log.Fatalf("could not process record: %v", err)
+//	}
+//
+//	rec := message.DnsRecord{
+//		Name: record.dnsRecordName,
+//		Type: message.Type_TYPE_CNAME,
+//		Data: record.dnsRecordData,
+//	}
+//
+//	err = trecord.Send(&rec)
+//	if err != nil {
+//		log.Fatalf("could not send dns record: %v", err)
+//	}
+//
+//	err = trecord.CloseSend()
+//	if err != nil {
+//		log.Fatalf("could not close: %v", err)
+//	}
+//
 //}
