@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/message"
 	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/service"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog/log"
@@ -96,24 +97,42 @@ func (t *Technitium) SendMsg(rec *message.DnsRecord) {
 
 func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, error) {
 	// Validate event data
+	switch event.Action {
+	case "create":
+		//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
+		//	return nil, errors.New("event does not contain hostname or domain")
+		//}
 
-	// Ignore destroy actions
+		cntr, err := inspect(c, &event)
+		if err != nil {
+			return nil, err
+		}
 
-	//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
-	//	return nil, errors.New("event does not contain hostname or domain")
-	//}
+		rec := new(message.DnsRecord)
+		rec.Name = cntr.Config.Hostname
+		rec.Type = message.Type_TYPE_CNAME // It's always going to be a CNAME
+		rec.Data = "dock01.int.xorko.net"  // TODO get dynamically
+		rec.Action = message.Action_ACTION_CREATE
+		rec.ContainerId = event.Actor.ID
+		return rec, nil
 
+	case "die":
+		rec := new(message.DnsRecord)
+		rec.Action = message.Action_ACTION_DIE
+		rec.ContainerId = event.Actor.ID
+		return rec, nil
+
+	default:
+		log.Debug().Msgf("Ignoring container %v, event type %v", event.Actor.ID, event.Action)
+		return nil, nil
+	}
+}
+
+func inspect(c *client.Client, event *events.Message) (container.InspectResponse, error) {
 	// Connect to Docker to get container info
 	inspect, err := c.ContainerInspect(context.Background(), event.Actor.ID)
 	if err != nil {
-		return nil, err
+		return inspect, err
 	}
-
-	rec := message.DnsRecord{
-		Name: inspect.Config.Hostname,
-		Type: message.Type_TYPE_CNAME,
-		Data: string(event.Action),
-	}
-
-	return &rec, nil
+	return inspect, nil
 }

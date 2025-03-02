@@ -178,7 +178,10 @@ func main() {
 				log.Err(err).Msg("Failed to create technitium record")
 			} else {
 				// Send record to gRPC server if we don't have any record errors
-				tech.SendMsg(rec)
+				if rec != nil {
+					tech.SendMsg(rec)
+				}
+
 			}
 		}
 	}
