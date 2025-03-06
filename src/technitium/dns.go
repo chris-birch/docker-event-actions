@@ -3,6 +3,7 @@ package technitium
 import (
 	"context"
 	"fmt"
+	"github.com/caarlos0/env/v11"
 	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/message"
 	"github.com/chris-birch/docker-dns-sync/proto/technitium/v1/service"
 	"github.com/docker/docker/api/types/container"
@@ -20,12 +21,24 @@ type Technitium struct {
 	msg    chan *message.DnsRecord
 }
 
+type Config struct {
+	Server string `env:"GRPC_SERVER,required"`
+	Port   string `env:"GRPC_PORT,required"`
+}
+
 func (t *Technitium) Init() {
+	// Load environment variables
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse config")
+	}
+
 	// gRPC Client Setup
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-	conn, err := grpc.NewClient("localhost:50051", opts...) //TODO get from envar
+	grpcTarget := fmt.Sprintf("%s:%s", cfg.Server, cfg.Port)
+	conn, err := grpc.NewClient(grpcTarget, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to server")
 	}
