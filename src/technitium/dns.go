@@ -95,37 +95,35 @@ func (t *Technitium) SendMsg(rec *message.DnsRecord) {
 	}
 }
 
-func NewRecord(event events.Message, c *client.Client) (*message.DnsRecord, error) {
-	// Validate event data
-	switch event.Action {
-	case "create":
-		//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
-		//	return nil, errors.New("event does not contain hostname or domain")
-		//}
+func NewRecord(event events.Message, c *client.Client, dockHost string) (*message.DnsRecord, error) {
+	t := make(map[events.Action]message.Action)
+	t["create"] = message.Action_ACTION_CREATE
+	t["attach"] = message.Action_ACTION_ATTACH
+	t["start"] = message.Action_ACTION_START
+	t["die"] = message.Action_ACTION_DIE
 
-		cntr, err := inspect(c, &event)
-		if err != nil {
-			return nil, err
-		}
-
-		rec := new(message.DnsRecord)
-		rec.Name = cntr.Config.Hostname
-		rec.Type = message.Type_TYPE_CNAME // It's always going to be a CNAME
-		rec.Data = "dock01.int.xorko.net"  // TODO get dynamically
-		rec.Action = message.Action_ACTION_CREATE
-		rec.ContainerId = event.Actor.ID
-		return rec, nil
-
-	case "die":
-		rec := new(message.DnsRecord)
-		rec.Action = message.Action_ACTION_DIE
-		rec.ContainerId = event.Actor.ID
-		return rec, nil
-
-	default:
+	// Check that the event type is supported
+	if !validateEvent(event, t) {
 		log.Debug().Msgf("Ignoring container %v, with event type %v", event.Actor.ID, event.Action)
 		return nil, nil
 	}
+
+	//if event.Actor.Attributes["hostname"] == "" || event.Actor.Attributes["domain"] == "" {
+	//	return nil, errors.New("event does not contain hostname or domain")
+	//}
+
+	cntr, err := inspect(c, &event)
+	if err != nil {
+		return nil, err
+	}
+
+	rec := new(message.DnsRecord)
+	rec.Name = cntr.Config.Hostname
+	rec.Type = message.Type_TYPE_CNAME // It's always going to be a CNAME
+	rec.Data = dockHost
+	rec.Action = t[event.Action]
+	rec.ContainerId = event.Actor.ID
+	return rec, nil
 }
 
 func inspect(c *client.Client, event *events.Message) (container.InspectResponse, error) {
@@ -135,4 +133,16 @@ func inspect(c *client.Client, event *events.Message) (container.InspectResponse
 		return inspect, err
 	}
 	return inspect, nil
+}
+
+func validateEvent(event events.Message, act map[events.Action]message.Action) bool {
+	var valid bool
+	valid = false
+	for k := range act {
+		if event.Action == k {
+			valid = true
+			break
+		}
+	}
+	return valid
 }

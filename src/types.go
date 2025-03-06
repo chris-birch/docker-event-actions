@@ -12,4 +12,5 @@ type Config struct {
 	EnabledReporter []string            `yaml:"-"`
 	Filter          map[string][]string `yaml:"-"`
 	Exclude         map[string][]string `yaml:"-"`
+	DockHost        string              `yaml:"docker_host"`
 }

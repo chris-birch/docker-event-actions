@@ -151,6 +151,11 @@ func main() {
 	eventChan, errs := cli.Events(context.Background(), events.ListOptions{Filters: filterArgs})
 
 	// Setup Techchnitium package
+	if config.DockHost == "" {
+		log.Fatal().Msg("Docker host not set in config file")
+	} else {
+		log.Info().Msgf("Using docker host: %s", config.DockHost)
+	}
 	tech := new(technitium.Technitium)
 	tech.Init()
 	defer tech.Close()
@@ -173,7 +178,7 @@ func main() {
 			}
 
 			// Prepare DNS record
-			rec, err := technitium.NewRecord(event, cli)
+			rec, err := technitium.NewRecord(event, cli, config.DockHost)
 			if err != nil {
 				log.Err(err).Msg("Failed to create technitium record")
 			} else {
@@ -181,7 +186,6 @@ func main() {
 				if rec != nil {
 					tech.SendMsg(rec)
 				}
-
 			}
 		}
 	}

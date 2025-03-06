@@ -10,7 +10,7 @@ Using the excellent [yubiuser/docker-event-monitor](https://github.com/yubiuser/
 
 ## Technical
 
-The application uses Docker's API to connect to the [event stream](https://docs.docker.com/engine/api/v1.43/#tag/System/operation/SystemEvents). Each new event is procesed, logged and can be reported.
+The application uses Docker's API to connect to the [event stream](https://docs.docker.com/engine/config/v1.43/#tag/System/operation/SystemEvents). Each new event is procesed, logged and can be reported.
 
 ### Configuration
 

@@ -1,4 +1,4 @@
-# Created by https://www.toptal.com/developers/gitignore/api/go,intellij
+# Created by https://www.toptal.com/developers/gitignore/config/go,intellij
 
 ### Go ###
 # If you prefer the allow list template instead of the deny list, see community template:
@@ -71,4 +71,4 @@ out/
 # See https://youtrack.jetbrains.com/issue/JBR-2257
 .idea/$CACHE_FILE$
 
-# End of https://www.toptal.com/developers/gitignore/api/go,intellij
+# End of https://www.toptal.com/developers/gitignore/config/go,intellij
