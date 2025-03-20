@@ -19,11 +19,12 @@ COPY ./go.mod ./go.sum ./
 RUN go mod download
 
 # Copy the source code and build
-COPY /src ./
+WORKDIR /app/code
+COPY . .
 RUN make build
 
 FROM scratch AS deploy
-COPY --from=builder /app/docker-event-monitor docker-event-monitor
+COPY --from=builder /app/code/bin/docker-event-monitor docker-event-monitor
 # this pulls directly from the upstream image, which already has ca-certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/docker-event-monitor"]

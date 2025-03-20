@@ -6,5 +6,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="docker-event-monitor" />
+    <orderEntry type="module" module-name="go-routine-counter" />
   </component>
 </module>

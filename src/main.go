@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/chris-birch/docker-event-actions/internal/dns"
 	"github.com/docker/docker/api/types/events"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,8 +14,6 @@ import (
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"gopkg.in/yaml.v3"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -137,15 +137,27 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create new docker client")
 	}
+
 	defer func(cli *client.Client) {
 		err := cli.Close()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to close docker client")
 		}
+		fmt.Println("here...")
 	}(cli)
 
 	// receives events from the channel
 	eventChan, errs := cli.Events(context.Background(), events.ListOptions{Filters: filterArgs})
+
+	// Setup DNS package
+	if config.DockHost == "" {
+		log.Fatal().Msg("Docker host not set in config file")
+	} else {
+		log.Info().Msgf("Using docker host: %s", config.DockHost)
+	}
+	tech := new(dns.Sync)
+	tech.Init()
+	defer tech.Close()
 
 	for {
 		select {
@@ -163,7 +175,17 @@ func main() {
 					break //breaks out of the select and waits for the next event to arrive
 				}
 			}
-			processEvent(event)
+
+			// Prepare DNS record
+			rec, err := dns.NewRecord(event, cli, config.DockHost)
+			if err != nil {
+				log.Err(err).Msg("Failed to create technitium record")
+			} else {
+				// Send record to gRPC server if we don't have any record errors
+				if rec != nil {
+					tech.SendMsg(rec)
+				}
+			}
 		}
 	}
 }

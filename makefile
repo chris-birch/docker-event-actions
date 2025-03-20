@@ -30,4 +30,4 @@ endif
 DATE = $(shell date +%s)
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -ldflags "-s -w -X 'main.version=${GIT_VERSION}' -X 'main.gitdate=${GIT_DATE}' -X 'main.date=${DATE}' -X 'main.commit=${GIT_COMMIT}' -X 'main.branch=${GIT_BRANCH}'" -o=${BINARY_NAME}
+	CGO_ENABLED=0 go build -C src -ldflags "-s -w -X 'main.version=${GIT_VERSION}' -X 'main.gitdate=${GIT_DATE}' -X 'main.date=${DATE}' -X 'main.commit=${GIT_COMMIT}' -X 'main.branch=${GIT_BRANCH}'" -o=../bin/${BINARY_NAME}

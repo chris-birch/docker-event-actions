@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/docker-event-actions.iml" filepath="$PROJECT_DIR$/.idea/docker-event-actions.iml" />
       <module fileurl="file://$PROJECT_DIR$/../tmp/docker-event-monitor/.idea/docker-event-monitor.iml" filepath="$PROJECT_DIR$/../tmp/docker-event-monitor/.idea/docker-event-monitor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../tmp/go-routine-counter/.idea/go-routine-counter.iml" filepath="$PROJECT_DIR$/../tmp/go-routine-counter/.idea/go-routine-counter.iml" />
     </modules>
   </component>
 </project>

@@ -4,3 +4,4 @@ options:
   exclude_strings: ["Action=exec_start", "Action=exec_die", "Action=exec_create"]
   log_level: debug
   server_tag: My Server
+docker_host: dock01.int.xorko.net
